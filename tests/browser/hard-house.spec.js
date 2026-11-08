@@ -45,7 +45,8 @@ test("all performance controls are inline; portrait layouts are visible and touc
     const bounds = await page.locator("#performance").boundingBox();
     console.log("Performance layout", width, height, bounds);
     if (width === 390 && height === 844)
-      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(840);
+    else expect(bounds.y + bounds.height).toBeGreaterThan(height);
     await page.screenshot({
       path: `test-results/artifacts/hard-house-${width}x${height}.png`,
       fullPage: true,
@@ -57,6 +58,7 @@ test("XY pointer release, hold, gate division, keyboard and dry panic control re
 }) => {
   await page.goto("/");
   await page.locator("#play").click();
+  await page.locator("#xy").scrollIntoViewIfNeeded();
   const xy = await page.locator("#xy").boundingBox();
   await page.mouse.move(xy.x + xy.width * 0.7, xy.y + xy.height * 0.2);
   await page.mouse.down();
@@ -249,6 +251,7 @@ test("live XY drive changes recorded PCM and stays below the safety ceiling", as
   });
   await page.locator("#hold").click();
   await page.locator('[data-fx="drive"]').click();
+  await page.locator("#xy").scrollIntoViewIfNeeded();
   const r = await page.locator("#xy").boundingBox();
   await page.mouse.move(r.x + r.width * 0.5, r.y + 2);
   await page.mouse.down();

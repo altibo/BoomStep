@@ -202,6 +202,7 @@ test("actual post-master WAV includes specials and drive even when all loop trac
   expect(silence).toBeLessThan(0.000001);
   await page.locator("#hold").click();
   await page.locator('[data-fx="drive"]').click();
+  await page.locator("#xy").scrollIntoViewIfNeeded();
   const xy = await page.locator("#xy").boundingBox();
   await page.mouse.move(xy.x + xy.width * 0.5, xy.y + xy.height * 0.2);
   await page.mouse.down();
@@ -260,7 +261,7 @@ test("pads work from the offline PWA without starting its loop", async ({
     "running",
   );
 });
-test("specials and every musical control fit 390x844; smaller screens scroll honestly", async ({
+test("readable specials and controls fit 390x844; smaller viewports scroll honestly", async ({
   page,
 }) => {
   for (const [width, height] of [
@@ -279,7 +280,8 @@ test("specials and every musical control fit 390x844; smaller screens scroll hon
     expect(await page.locator("input[data-key]").count()).toBe(17);
     const b = await page.locator("#performance").boundingBox();
     console.log("Specials layout", width, height, b);
-    if (height === 844) expect(b.y + b.height).toBeLessThanOrEqual(height);
+    if (width === 390 && height === 844)
+      expect(b.y + b.height).toBeLessThanOrEqual(840);
     else expect(b.y + b.height).toBeGreaterThan(height);
     for (const selector of [
       ".special-pad",
