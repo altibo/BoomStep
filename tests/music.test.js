@@ -10,7 +10,7 @@ import {
   nextBar,
 } from "../src/music.js";
 import { encodeWav } from "../src/wav.js";
-test("96 Hard House and Classic patterns are deterministic and valid in all four bars", () => {
+test("112 Bounce, Hard House and Classic patterns are deterministic and valid in all four bars", () => {
   for (let p = 0; p < PACKS.length; p++)
     for (let t = 0; t < 4; t++)
       for (let v = 0; v < 4; v++) {

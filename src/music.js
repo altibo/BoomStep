@@ -1,3 +1,4 @@
+import { BOUNCE_PACK, BOUNCE_NAMES, bounceEvents } from "./bounce-music.js";
 import {
   PACKS as CLASSICS,
   NAMES as CLASSIC_NAMES,
@@ -40,14 +41,20 @@ export const PACKS = [
     name: `Classic · ${p.name}`,
     character: "classic",
   })),
+  BOUNCE_PACK,
 ];
 export const namesFor = (pack, track) =>
-  pack >= 3 ? CLASSIC_NAMES[track] : NAMES[track];
+  pack === 6
+    ? BOUNCE_NAMES[track]
+    : pack >= 3
+      ? CLASSIC_NAMES[track]
+      : NAMES[track];
 export const FX_MODES = ["echo", "flanger", "gate", "drive"];
-export function initialSession() {
+export function initialSession(pack = 6) {
   return {
-    version: 2,
-    pack: 0,
+    version: 3,
+    pack,
+    specialLevel: 0.7,
     master: 1,
     reverb: 0.08,
     drive: 0.16,
@@ -66,7 +73,7 @@ export function initialSession() {
 const unit = (n) =>
   typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1;
 export function validateSession(value) {
-  if (!value || ![1, 2].includes(value.version))
+  if (!value || ![1, 2, 3].includes(value.version))
     throw new Error("Ungültige Session");
   let s = structuredClone(value);
   if (s.version === 1) {
@@ -81,6 +88,11 @@ export function validateSession(value) {
       fx: { mode: "echo", x: 0.5, depth: 0, hold: false, division: 8 },
     };
   }
+  if (s.version === 2) {
+    if (!Number.isInteger(s.pack) || s.pack < 0 || s.pack > 5)
+      throw new Error("Ungültiges V2-Paket");
+    s = { ...s, version: 3, specialLevel: 0.7 };
+  }
   if (
     !Number.isInteger(s.pack) ||
     !PACKS[s.pack] ||
@@ -88,7 +100,11 @@ export function validateSession(value) {
     s.tracks.length !== 4
   )
     throw new Error("Ungültige Session");
-  if (!["master", "reverb", "drive", "pump"].every((k) => unit(s[k])))
+  if (
+    !["master", "reverb", "drive", "pump", "specialLevel"].every((k) =>
+      unit(s[k]),
+    )
+  )
     throw new Error("Ungültiger Mix");
   if (
     !s.fx ||
@@ -118,6 +134,7 @@ export const nextBar = (step) => Math.ceil(step / 16) * 16;
 export const hz = (midi) => 440 * 2 ** ((midi - 69) / 12);
 export const cutoff = (value) => 180 * (18000 / 180) ** value;
 export function eventsAt(packId, track, variant, step) {
+  if (packId === 6) return bounceEvents(track, variant, step);
   if (packId >= 3) return legacyEvents(packId - 3, track, variant, step);
   const pack = PACKS[packId],
     s = step % 16,

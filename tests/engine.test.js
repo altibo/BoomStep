@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { Engine } from "../src/engine.js";
 import { initialSession } from "../src/music.js";
 test("lookahead schedules on AudioContext time, never timer callback time", () => {
-  const e = new Engine(initialSession());
+  const e = new Engine(initialSession(0));
   e.ctx = { currentTime: 1 };
   e.nextTime = 1.06;
   e.strips = Array.from({ length: 4 }, () => ({ filter: {} }));
@@ -19,7 +19,7 @@ test("lookahead schedules on AudioContext time, never timer callback time", () =
   assert.ok(Math.abs(e.timeline[1].time - 1.16) < 1e-9);
 });
 test("late timer skips stale steps with phase retained and queued changes applied", () => {
-  const e = new Engine(initialSession());
+  const e = new Engine(initialSession(0));
   e.ctx = { currentTime: 5 };
   e.nextTime = 0;
   e.strips = Array.from({ length: 4 }, () => ({ filter: {} }));
