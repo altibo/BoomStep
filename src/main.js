@@ -1,3 +1,9 @@
+import {
+  ribbonVariant,
+  orbitPosition,
+  orbitPoint,
+  glideEntry,
+} from "./instrument-ui.js";
 import { SPECIALS } from "./specials.js";
 import { encodeWav } from "./wav.js";
 import "./style.css";
@@ -11,7 +17,11 @@ import {
 } from "./music.js";
 import { Engine, renderDiagnostic } from "./engine.js";
 import { xyPoint, releaseFX, panicSession } from "./fx.js";
-const padFlashes = new Map();
+const padFlashes = new Map(),
+  ribbonGestures = new Map(),
+  glidePointers = new Map();
+let refreshTimer;
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const app = document.querySelector("#app"),
   $ = (s) => document.querySelector(s);
 let session = initialSession(),
@@ -22,18 +32,29 @@ let session = initialSession(),
 const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
-<section id="performance" aria-label="Hard House Performance">
-<header><h1>BoomStep<span>BERLIN BOUNCE / LIVE</span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span id="pack-meta"></span></div></header>
-<div class="phasebar"><span id="transport-state">BEREIT</span><div class="phase" aria-label="8-Takt-Phrase, gemeinsame vier Akkorde">${Array.from({ length: 8 }, (_, i) => `<i data-bar="${i}"></i>`).join("")}</div><span id="beat">150 BPM</span></div>
-<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span id="name-${i}"></span><span class="pending" id="pending-${i}" aria-live="polite"></span></div>${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}">${v + 1}</button>`).join("")}<button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><div class="track-bottom">${slider("VOL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
+<section id="performance" aria-label="Orbit Deck Performance">
+<header><h1>BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span id="pack-meta"></span></div></header>
+<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span id="name-${i}"></span><span class="pending" id="pending-${i}" aria-live="polite"></span></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: tippen oder ziehen, loslassen wählt, Abbruch verwirft">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><div class="track-bottom">${slider("VOL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
 <section class="master" aria-label="Direkte Mastereffekte">${slider("MASTER FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
-<section class="fx-section" aria-label="XY Performanceeffekte"><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="xy-axis">DUNKEL ← FARBE → HELL</div><strong id="xy-label">ECHO</strong><span id="xy-hint">Ziehen · loslassen = trocken</span><i id="xy-dot"></i><span class="xy-depth">↑ TIEFE</span></div><div class="fx-pads" role="group" aria-label="Effektmodus"><button data-fx="echo">ECHO<span>3/16 · Feedback</span></button><button data-fx="flanger">FLANGE<span>Moduliert</span></button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippe für 1/16</span></button><button data-fx="drive">DRIVE<span>Sättigung</span></button></div></section>
-<section class="specials" aria-label="Einmalige Live-Specials"><div class="specials-head"><h2>LIVE SPECIALS <small>1 TAP · 1 HIT</small></h2>${slider("SPECIAL LEVEL", "specialLevel", session.specialLevel)}</div><div class="special-pads">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}<span>${p.hint}</span></button>`).join("")}</div></section>
+<section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><div class="orbit-deck"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
+  { length: 8 },
+  (_, i) => {
+    const a = orbitPoint(i / 8 + 0.014),
+      b = orbitPoint((i + 1) / 8 - 0.014);
+    return `<path data-orbit-bar="${i}" d="M ${a.x} ${a.y} A 69 69 0 0 1 ${b.x} ${b.y}"/>`;
+  },
+).join("")}</g><g class="orbit-numbers">${Array.from({ length: 8 }, (_, i) => {
+  const p = orbitPoint((i + 0.5) / 8, 69);
+  return `<text x="${p.x}" y="${p.y + 3}">${i + 1}</text>`;
+}).join(
+  "",
+)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="xy-axis">DUNKEL ↔ HELL</div><strong id="xy-label">ECHO</strong><span id="xy-hint">Ziehen · loslassen = trocken</span><i id="xy-dot"></i><span class="xy-depth">↑ TIEFE</span></div><div id="orbit-status">TAKT 1/8 · BEAT 1</div></div><div class="fx-pads" role="group" aria-label="Effektmodus"><button data-fx="echo">ECHO<span>3/16 · Feedback</span></button><button data-fx="flanger">FLANGE<span>Moduliert</span></button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippe für 1/16</span></button><button data-fx="drive">DRIVE<span>Sättigung</span></button></div></section>
+<section class="specials" aria-label="Einmalige Live-Specials"><div class="specials-head"><h2>STRUM SPECIALS <small>TIPPE ODER STREICHE →</small></h2>${slider("SPECIAL LEVEL", "specialLevel", session.specialLevel)}</div><div class="special-pads" id="special-board" aria-label="Sechs Einmal-Pads: über Feldgrenzen streichen spielt je einen Hit, Halten wiederholt nicht">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}<span>${p.hint}</span></button>`).join("")}</div></section>
 <div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic" title="Alle Effekte neutral, Musik bleibt">DRY!</button></div>
 </section>
-<div id="notice" role="status">Berlin Bounce · Originale Patterns. Ein Tap spielt ein Special.</div><a id="download" hidden>WAV herunterladen</a>
+<div id="notice" role="status">Patternband ziehen → loslassen wählt. Specials streichen → ein Hit je Feld.</div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Dein Rave, eine Oberfläche.</h2><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. SPECIAL LEVEL regelt alle Pads. ■ beendet auch Specials; DRY! setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Echo-Send. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. DRY! setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = DRY!.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE/Öffnen sichert einen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Lokale Synthese · keine Samples · Vordergrund-Audio</footer></main>`;
+<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen zeigt eine helle Vorschau; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Abbrechen oder Fingerverlust verwirft nur die Vorschau. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = klingt; Amber/TAKT = vorgemerkt; heller Rahmen/LOS = Vorschau. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. SPECIAL LEVEL regelt alle Pads. ■ beendet auch Specials; DRY! setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Echo-Send. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. DRY! setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = DRY!.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE/Öffnen sichert einen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Lokale Synthese · keine Samples · Vordergrund-Audio</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -47,7 +68,38 @@ function syncSliders() {
 }
 function refresh() {
   const pos = engine.position(),
-    p = PACKS[session.pack];
+    p = PACKS[session.pack],
+    orbit = orbitPosition(
+      pos,
+      engine.ctx?.currentTime || 0,
+      p.bpm,
+      engine.running,
+    );
+  const head = orbitPoint(
+    reducedMotion.matches ? orbit.bar / 8 : orbit.progress,
+  );
+  $("#orbit").dataset.motion = reducedMotion.matches ? "bar" : "step";
+  $("#orbit-head").setAttribute("cx", head.x);
+  $("#orbit-head").setAttribute("cy", head.y);
+  document
+    .querySelectorAll("[data-orbit-bar]")
+    .forEach((el, i) => el.classList.toggle("current", i === orbit.bar));
+  const waiting = [...engine.clock.pending.values()];
+  $("#orbit-pending").innerHTML = waiting
+    .map((q) => {
+      const p = orbitPoint((q.at % 128) / 128, 77);
+      return `<circle cx="${p.x}" cy="${p.y}" r="3"/>`;
+    })
+    .join("");
+  $("#orbit-status").textContent =
+    `TAKT ${orbit.bar + 1}/8 · BEAT ${orbit.beat}${waiting.length ? ` · ${waiting.length} → T${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}`;
+  if (engine.recording)
+    $("#orbit-status").textContent +=
+      ` · REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`;
+  $("#orbit").setAttribute(
+    "aria-label",
+    `Gemeinsame Phase: Takt ${orbit.bar + 1} von 8, Akkord ${orbit.chord + 1}, Beat ${orbit.beat}${waiting.length ? `, ${waiting.length} vorgemerkte Wechsel an Takt ${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}. Anzeige, kein Seek.`,
+  );
   $("#pack").value = session.pack;
   $("#pack-meta").textContent = `${p.bpm} BPM · ${p.key}`;
   $("#play").textContent = engine.running ? "Ⅱ PAUSE" : "▶ PLAY";
@@ -56,17 +108,9 @@ function refresh() {
     : engine.paused
       ? "PAUSE"
       : "BEREIT";
-  $("#beat").textContent = engine.recording
-    ? `REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`
-    : `${p.bpm} BPM`;
   $("#record").classList.toggle("recording", engine.recording);
   $("#record").setAttribute("aria-pressed", String(engine.recording));
   $("#record span").textContent = engine.recording ? "■ WAV" : "REC";
-  document
-    .querySelectorAll("[data-bar]")
-    .forEach((el, i) =>
-      el.classList.toggle("current", i === Math.floor((pos.step % 128) / 16)),
-    );
   session.tracks.forEach((t, i) => {
     const pending = engine.clock.pending.get(i),
       active = engine.running || engine.paused ? pos.variants[i] : t.variant;
@@ -86,6 +130,23 @@ function refresh() {
       el.classList.toggle("active", v === active);
       el.classList.toggle("queued", pending?.variant === v);
       el.setAttribute("aria-pressed", String(v === active));
+      const preview = ribbonGestures.get(i)?.variant === v;
+      el.classList.toggle("scrub-preview", preview);
+      el.querySelector(".pattern-cue").textContent = preview
+        ? "LOS →"
+        : pending?.variant === v
+          ? "TAKT →"
+          : v === active
+            ? engine.running
+              ? "SPIELT"
+              : engine.paused
+                ? "PAUSE"
+                : "BEREIT"
+            : "";
+      el.style.setProperty(
+        "--step-progress",
+        `${(reducedMotion.matches ? Math.floor(orbit.stepProgress * 4) / 4 : orbit.stepProgress) * 100}%`,
+      );
     });
   });
   document
@@ -113,8 +174,8 @@ function refresh() {
     : "Ziehen · loslassen = neutral";
   $("#gate-label").textContent =
     `1/${session.fx.division} · tippe für 1/${session.fx.division === 8 ? 16 : 8}`;
-  $("#xy-dot").style.left = `${session.fx.x * 100}%`;
-  $("#xy-dot").style.top = `${(1 - session.fx.depth) * 100}%`;
+  $("#xy-dot").style.left = `${14 + session.fx.x * 72}%`;
+  $("#xy-dot").style.top = `${14 + (1 - session.fx.depth) * 72}%`;
   $("#xy").setAttribute(
     "aria-valuenow",
     String(Math.round(session.fx.depth * 100)),
@@ -123,6 +184,17 @@ function refresh() {
     "aria-valuetext",
     `${session.fx.mode}, Tiefe ${Math.round(session.fx.depth * 100)} Prozent, Farbe ${Math.round(session.fx.x * 100)} Prozent`,
   );
+  // One bounded paint timer while audio/finite flashes need it; none while idle.
+  const moving =
+    engine.running ||
+    engine.recording ||
+    engine.specialGroups.length ||
+    [...padFlashes.values()].some((t) => t > performance.now());
+  if (moving && !refreshTimer)
+    refreshTimer = setTimeout(() => {
+      refreshTimer = null;
+      refresh();
+    }, 80);
 }
 async function guarded(fn) {
   if (busy) return;
@@ -166,7 +238,7 @@ app.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.special && e.detail === 0) triggerPad(b.dataset.special);
-  if (b.dataset.track !== undefined)
+  if (b.dataset.track !== undefined && e.detail === 0)
     engine.queue(Number(b.dataset.track), Number(b.dataset.variant));
   for (const key of ["mute", "solo"])
     if (b.dataset[key] !== undefined) {
@@ -192,12 +264,78 @@ function triggerPad(id) {
       console.error(e);
     });
 }
-app.addEventListener("pointerdown", (e) => {
-  const b = e.target.closest("[data-special]");
-  if (!b) return;
+// Independent per-track captures: simultaneous drags do not steal another lane.
+for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
+  const track = Number(ribbon.dataset.ribbon);
+  const preview = (e) => {
+    const g = ribbonGestures.get(track);
+    if (g?.pointerId !== e.pointerId) return;
+    g.variant = ribbonVariant(e.clientX, ribbon.getBoundingClientRect());
+    refresh();
+  };
+  ribbon.onpointerdown = (e) => {
+    if (e.button !== 0 || ribbonGestures.has(track)) return;
+    e.preventDefault();
+    ribbonGestures.set(track, { pointerId: e.pointerId, variant: 0 });
+    ribbon.setPointerCapture(e.pointerId);
+    preview(e);
+  };
+  ribbon.onpointermove = preview;
+  const finish = (e, commit) => {
+    const g = ribbonGestures.get(track);
+    if (g?.pointerId !== e.pointerId) return;
+    ribbonGestures.delete(track);
+    if (commit) engine.queue(track, g.variant);
+    if (ribbon.hasPointerCapture(e.pointerId))
+      ribbon.releasePointerCapture(e.pointerId);
+    refresh();
+  };
+  ribbon.onpointerup = (e) => finish(e, true);
+  ribbon.onpointercancel = (e) => finish(e, false);
+  ribbon.onlostpointercapture = (e) => finish(e, false);
+  ribbon.onkeydown = (e) => {
+    const active = Number(e.target.closest("[data-variant]")?.dataset.variant);
+    if (!Number.isFinite(active)) return;
+    const next = {
+      ArrowLeft: Math.max(0, active - 1),
+      ArrowRight: Math.min(3, active + 1),
+      Home: 0,
+      End: 3,
+    }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    engine.queue(track, next);
+    ribbon.querySelector(`[data-variant="${next}"]`).focus();
+  };
+}
+const board = $("#special-board");
+function glide(e) {
+  const state = glidePointers.get(e.pointerId);
+  if (!state) return;
+  const hit = document
+    .elementFromPoint(e.clientX, e.clientY)
+    ?.closest("[data-special]");
+  const id = hit && board.contains(hit) ? hit.dataset.special : null;
+  const next = glideEntry(state.last, id);
+  state.last = next.current;
+  if (next.trigger) triggerPad(id);
+}
+board.onpointerdown = (e) => {
+  if (e.button !== 0) return;
   e.preventDefault();
-  triggerPad(b.dataset.special);
-});
+  glidePointers.set(e.pointerId, { last: null });
+  board.setPointerCapture(e.pointerId);
+  glide(e);
+};
+board.onpointermove = glide;
+const endGlide = (e) => {
+  glidePointers.delete(e.pointerId);
+  if (board.hasPointerCapture(e.pointerId))
+    board.releasePointerCapture(e.pointerId);
+};
+board.onpointerup = endGlide;
+board.onpointercancel = endGlide;
+board.onlostpointercapture = endGlide;
 app.addEventListener("input", (e) => {
   const { key, strip } = e.target.dataset;
   if (!key) return;
@@ -230,6 +368,8 @@ xy.onpointerup = endPointer;
 xy.onpointercancel = (e) => {
   if (e.pointerId === activePointer) {
     activePointer = null;
+    ribbonGestures.clear();
+    glidePointers.clear();
     session.fx.hold = false;
     release();
   }
@@ -311,6 +451,9 @@ $("#save").onclick = () => {
 async function restore(value) {
   if (engine.recording) throw new Error("Bitte zuerst Aufnahme beenden.");
   const next = validateSession(value);
+  ribbonGestures.clear();
+  glidePointers.clear();
+  padFlashes.clear();
   await engine.dispose();
   session = next;
   engine = new Engine(session, refresh);
@@ -378,6 +521,8 @@ $("#help").onclick = () => {
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     activePointer = null;
+    ribbonGestures.clear();
+    glidePointers.clear();
     session.fx.hold = false;
     release();
     if (engine.running)
@@ -418,4 +563,3 @@ window.boomstep = {
   },
 };
 refresh();
-setInterval(refresh, 80);

@@ -729,3 +729,350 @@ footer {
     font-size: 9px;
   }
 }
+
+/* Orbit Deck: continuous gestures, explicit discrete destinations, no hidden modes. */
+.track {
+  padding: 2px 5px;
+  border-radius: 12px;
+  background: #0d2030;
+}
+.track-top {
+  grid-template-columns: 48px minmax(176px, 1fr) 44px 44px;
+  gap: 4px;
+}
+.pattern-ribbon {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  touch-action: none;
+  user-select: none;
+  border-radius: 12px;
+  overflow: visible;
+}
+.pattern {
+  border-radius: 0;
+  height: 44px;
+  font-size: 16px;
+  padding: 2px 0 7px;
+  background: #142b3c;
+  border-color: #345164;
+}
+.pattern:first-child {
+  border-radius: 12px 0 0 12px;
+}
+.pattern:last-child {
+  border-radius: 0 12px 12px 0;
+}
+.pattern b {
+  font-weight: 750;
+}
+.pattern-cue {
+  display: block;
+  height: 8px;
+  font-size: 6px;
+  line-height: 8px;
+  letter-spacing: 0.3px;
+}
+.pattern.active::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  left: 2px;
+  width: calc(var(--step-progress, 0%) - 4px);
+  height: 2px;
+  background: #003f50;
+}
+.pattern.scrub-preview {
+  outline: 2px solid white;
+  outline-offset: -3px;
+  z-index: 1;
+  background: #254e62;
+  color: white;
+}
+.pattern.queued {
+  border: 2px dashed var(--amber);
+}
+.track-bottom {
+  gap: 10px;
+}
+.track-name::after {
+  content: "ZIEHEN →";
+  display: block;
+  font-size: 6px;
+  letter-spacing: 0.4px;
+  color: #77a9bb;
+}
+.mute,
+.solo {
+  border-radius: 22px;
+  font-size: 8px;
+}
+.fx-section {
+  height: 156px;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+.orbit-deck {
+  position: relative;
+  width: 160px;
+  height: 156px;
+}
+#orbit {
+  position: absolute;
+  width: 152px;
+  height: 152px;
+  left: 4px;
+  top: -4px;
+  overflow: visible;
+  pointer-events: none;
+}
+.orbit-bars path {
+  fill: none;
+  stroke: #233c50;
+  stroke-width: 13px;
+}
+.orbit-bars path.current {
+  stroke: #236577;
+}
+.orbit-numbers text {
+  fill: #cee8ee;
+  font-size: 8px;
+  text-anchor: middle;
+}
+#orbit-head {
+  fill: #9cf6ff;
+  stroke: #09212d;
+  stroke-width: 1.5px;
+}
+#orbit-pending circle {
+  fill: var(--amber);
+  stroke: #211b10;
+  stroke-width: 1px;
+}
+#xy {
+  position: absolute;
+  width: 106px;
+  height: 106px;
+  top: 19px;
+  left: 27px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #164250, #09202f);
+}
+.xy-axis {
+  font-size: 6px;
+  top: 15px;
+  letter-spacing: 0;
+}
+#xy-label {
+  font-size: 16px;
+}
+#xy-hint {
+  font-size: 6px;
+  max-width: 82px;
+  text-align: center;
+}
+.xy-depth {
+  font-size: 6px;
+  left: 31px;
+  bottom: 13px;
+}
+#xy-dot {
+  width: 15px;
+  height: 15px;
+  box-shadow: none;
+}
+#orbit-status {
+  position: absolute;
+  bottom: 0;
+  width: 160px;
+  text-align: center;
+  font-size: 7px;
+  color: #bbdae4;
+  white-space: nowrap;
+}
+.fx-pads {
+  height: 132px;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.fx-pads button {
+  border-radius: 18px 7px;
+  font-size: 12px;
+}
+.master {
+  border-radius: 12px;
+  margin-top: 5px;
+}
+.specials {
+  border-radius: 16px;
+  padding: 2px 5px 5px;
+}
+.specials-head h2 {
+  font-size: 10px;
+}
+.specials-head small {
+  font-size: 7px;
+  letter-spacing: 0.4px;
+}
+.special-pads {
+  touch-action: none;
+  user-select: none;
+  gap: 4px;
+}
+.special-pad {
+  border-radius: 14px 6px;
+  height: 44px;
+  background: #153347;
+  border-color: #45677c;
+}
+.special-pad:nth-child(3n + 1) {
+  border-radius: 20px 6px 6px 14px;
+}
+.special-pad:nth-child(3n) {
+  border-radius: 6px 20px 14px 6px;
+}
+@media (min-height: 780px) and (min-width: 360px) {
+  .track {
+    padding: 2px 5px;
+  }
+  .mini,
+  .mini input {
+    height: 36px;
+  }
+  .fx-section {
+    height: 156px;
+  }
+}
+@media (max-height: 740px) and (min-width: 360px) and (max-width: 599px) {
+  .fx-section {
+    height: 156px;
+  }
+}
+@media (max-width: 359px) {
+  .track-top {
+    grid-template-columns: minmax(176px, 1fr) 44px 44px;
+    gap: 4px;
+  }
+  .track-name {
+    grid-column: 1/-1;
+  }
+  .track-name::after {
+    margin-left: auto;
+  }
+  .fx-section {
+    grid-template-columns: 152px 1fr;
+    height: 156px;
+    gap: 4px;
+  }
+  .orbit-deck {
+    transform: scale(0.95);
+    transform-origin: left center;
+  }
+  .fx-pads button {
+    font-size: 9px;
+  }
+  .fx-pads button span {
+    font-size: 7px;
+  }
+}
+@media (min-width: 600px) {
+  .track-top {
+    grid-template-columns: 48px minmax(176px, 1fr) 44px 44px;
+  }
+  .fx-section {
+    grid-template-columns: 180px 1fr;
+    height: 156px;
+  }
+  .fx-pads {
+    grid-template-columns: repeat(4, 1fr);
+    height: 100px;
+  }
+}
+
+.pattern-cue {
+  font-size: 7px;
+}
+.track-name::after {
+  font-size: 7px;
+}
+#xy {
+  width: 96px;
+  height: 96px;
+  left: 32px;
+  top: 24px;
+  border-radius: 24px;
+}
+.xy-axis {
+  font-size: 7px;
+  top: 11px;
+}
+#xy-hint {
+  font-size: 7px;
+  max-width: 82px;
+}
+.xy-depth {
+  bottom: 8px;
+  left: 26px;
+  font-size: 7px;
+}
+.gesture-guide {
+  flex: 1;
+  text-align: center;
+  color: #9ebecb;
+  font-size: 7px;
+  letter-spacing: 0.5px;
+}
+@media (max-height: 740px) and (min-width: 360px) and (max-width: 599px) {
+  .track {
+    padding: 0 5px;
+  }
+  .fx-section {
+    height: 128px;
+    grid-template-columns: 128px 1fr;
+  }
+  .orbit-deck {
+    transform: scale(0.8);
+    transform-origin: left center;
+  }
+  .fx-pads {
+    height: 112px;
+  }
+  .xy-axis,
+  #xy-hint {
+    font-size: 8px;
+  }
+  #orbit-status {
+    font-size: 9px;
+  }
+}
+/* Real 44px hit areas for every direct musical slider, not overlapping labels. */
+header {
+  height: 44px;
+}
+h1 span {
+  letter-spacing: 1px;
+}
+.mini,
+.mini input,
+.specials-head .mini,
+.specials-head .mini input {
+  height: 44px;
+}
+.specials-head {
+  height: 44px;
+}
+.secondary button {
+  min-height: 44px;
+}
+@media (min-height: 780px) and (min-width: 360px) {
+  main {
+    padding-top: 6px;
+  }
+  .fx-section {
+    height: 142px;
+  }
+  .orbit-deck {
+    transform: scale(0.9);
+    transform-origin: left center;
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "name": "BoomStep · Bounce + Specials",
+  "name": "BoomStep · Orbit Deck",
   "short_name": "BoomStep",
   "lang": "de",
   "start_url": "./",
@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#06101d",
   "theme_color": "#061322",
-  "description": "Berlin Bounce, vier Spuren, sechs einmalige Specials und direkte XY-Effekte. Eigene Offline-Synthese.",
+  "description": "Patternbänder ziehen, Specials streichen, gemeinsame Audiozeit im Orbit sehen. Vier Spuren und eigene Offline-Synthese.",
   "icons": [
     {
       "src": "icon-192.png",

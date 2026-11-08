@@ -1,8 +1,17 @@
-# BoomStep · Berlin Bounce + Live Specials
+# BoomStep · Orbit Deck
 
 **Spielen: https://altibo.github.io/BoomStep/** · Offlinefähige Musik-PWA, keine Anmeldung, keine Samples, kein KI-Backend.
 
 Neues eigenes Standardpaket **Berlin Bounce** und **sechs einmalige Live-Specials**. Vier laufende Spuren, **alle musikalischen Regler direkt auf einer Oberfläche**, ein XY-Feld zum Spielen statt verschachtelter Menüs. Kopfhörer empfohlen. Die Versionen bleiben über Git-Historie und separate Feature-/Deploybranches nachvollziehbar.
+
+## Orbit Deck · lokaler Reviewstand 3.1
+
+Noch **nicht veröffentlicht**: der aktuelle UI-Stand wartet auf unabhängigen Screenshot-/Interaktionsreview. Die öffentliche Pages-Version bleibt bis zur Freigabe unverändert.
+
+- **Patternbänder**: vier diskrete große Segmente je Spur bleiben direkt tippbar. Ziehen = weiße Vorschau; Loslassen = letzte Variante taktgenau vormerken; Cancel/lost capture = Vorschau verwerfen. Cyan/SPIELT, Amber/TAKT → und Weiß/LOS → trennen die Zustände. Pfeile/Home/End und Enter/Space bleiben nutzbar. Kein behauptetes kontinuierliches Klangmorphing.
+- **Strum Specials**: über die sechs sichtbaren Pads streichen; jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten wiederholt nie. Fingerhistorien sind unabhängig, Pointercancel räumt die Geste auf, endliche Sounds klingen aus. Tastatur weiterhin möglich.
+- **Audiozeit-Orbit**: echte gemeinsame achttaktige Phase, Audiozeit-Playhead und Pending-Wechselmarken; kein CSS-Spinner, kein Seek. Bestehendes XY-Feld im Orbit und vier direkte FX-Pads daneben. Reduced Motion zeigt nur Taktwechsel statt kontinuierlichem Kopf. Keine neuen Sound-/Sessionparameter, unverändertes validiertes V1–3-Format.
+- Vier gelesene Herstellerquellen, übernommene Prinzipien und bewusst verworfene Ideen: [GUI-Recherche](docs/gui-research.md). Keine Behauptung einer neuen Erfindung; keine kopierten Markenlayouts oder Assets.
 
 ## Stilreferenz: textgestützt, keine Songkopie
 
@@ -50,12 +59,12 @@ Automatisierte Chromium-Prüfung in CSS-Pixeln:
 
 | Viewport       | Musikbereich einschließlich Transport | Verhalten                                          |
 | -------------- | ------------------------------------: | -------------------------------------------------- |
-| 390 × 844      |                      unten bei 830 px | alles direkt im Viewport                           |
-| 390 × 700      |                      unten bei 736 px | ca. 36 px vertikales Scrollen                      |
-| 320 × 568      |                  unten bei ca. 928 px | vertikales Scrollen, keine versteckten Musikregler |
-| 844 × 390 quer |                  unten bei ca. 586 px | vertikales Scrollen                                |
+| 390 × 844      |                      unten bei 840 px | alles direkt im Viewport                           |
+| 390 × 700      |                      unten bei 805 px | ca. 105 px vertikales Scrollen                     |
+| 320 × 568      |                  unten bei ca. 990 px | vertikales Scrollen, keine versteckten Musikregler |
+| 844 × 390 quer |                  unten bei ca. 612 px | vertikales Scrollen                                |
 
-Pattern-, STUMM-/SOLO-, FX-, Special- und Transporttasten sowie Paketauswahl haben **mindestens 44×44 CSS-Pixel**. Die zwölf direkten Spur-Fader verwenden kompakte 36–40 px hohe Touchbereiche und klar beschriftete horizontale Regler; sie werden nicht als 44-px-Tasten ausgegeben. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
+Alle direkten musikalischen Eingabeflächen — Pattern, STUMM/SOLO, FX, Specials, Transport, Paketauswahl, XY und alle 17 Fader — haben **mindestens 44×44 CSS-Pixel**. Fader sind echte 44px hohe Felder, keine überlappenden vergrößerten Trefferzonen. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
 
 ## Aufnahme und Sessions
 
@@ -80,12 +89,12 @@ Node **22.12+** oder **24 LTS**, npm:
 ```sh
 npm ci
 npm run dev                   # Entwicklung, Port 5173
-npm test                      # 22 Node-Tests
+npm test                      # 25 Node-Tests
 npm run lint
 npm run build                 # statische PWA in dist/
 npm run preview               # Produktionsvorschau, Port 4173
 npx playwright install chromium
-npm run test:browser           # 20 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
+npm run test:browser           # 29 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
 npm audit --omit=dev
 ```
 
@@ -93,4 +102,4 @@ npm audit --omit=dev
 
 Node-Tests prüfen zusätzlich die sechs distinkten finiten Pläne, F-Moll und indexerhaltende V2-Migration. Browser-Tests ergänzen Standalone-Taps ohne Loopstart, Retrigger/Keyboard/achtfaches Voice-Stealing und Cleanup, unveränderte Clock/Patterns, Pause mit Specials, echte Special-PCM-Aufnahme bei stummen Loopspuren, Offline-Pads und neue Layoutgrößen. Die bisherige Suite bleibt erhalten. Node-Tests erhalten die früheren Clock-/WAV-/Capture-Regressionen und prüfen zusätzlich Migration, FX-Ziele, Release/Hold/DRY, Gatephase, Viertaktphase/Achttaktfills und unterschiedliche Patterns. Browser-Tests erhalten die früheren Audio-/Session-/Offline-Prüfungen und ergänzen Layouts, XY-Gesten, echte live aufgenommene Drive-Änderung, 48 Offline-Renders mit Signalunterschieden zwischen allen Hard-House-Varianten, begrenzte Peaks und hörbare Signaländerungen durch alle Effektwege. Native DSP-Ausgaben dürfen kleine numerische Abweichungen haben; Kompositionsereignisse bleiben deterministisch.
 
-`test-results/artifacts/` enthält Screenshots, einen Signalbericht, echte Live-WAVs, drei 14-sekündige synthetisierte Demo-WAVs, eine 35-sekündige eigene Berlin-Bounce-Performance mit Specials und eine tatsächliche Special-/FX-Liveaufnahme. Das sind lokale Testartefakte, keine automatisch publizierte Audio-Bibliothek. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
+`test-results/gui-artifacts/` enthält die drei neuen Viewport-Screenshots, Playing/Pending/FX- und Recording-Ansicht sowie `orbit-strum-live.wav`. Neue Browserfälle prüfen Preview/Commit/Cancel/lost capture, Tastatur, zwei simultane Finger, Audiozeit-Orbit/Pause, tatsächliche Strum-/Drive-PCM-Aufnahme und Idle-/Reduced-Motion-Verhalten. `test-results/artifacts/` enthält weiterhin Screenshots, einen Signalbericht, echte Live-WAVs, drei 14-sekündige synthetisierte Demo-WAVs, eine 35-sekündige eigene Berlin-Bounce-Performance mit Specials und eine tatsächliche Special-/FX-Liveaufnahme. Das sind lokale Testartefakte, keine automatisch publizierte Audio-Bibliothek. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
