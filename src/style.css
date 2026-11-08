@@ -226,15 +226,15 @@ h2 {
   color: #d4fbff;
   border: 2px solid var(--cyan);
 }
-.muted {
+.inaudible {
   background: #09131e;
   border-color: #3c4c5a;
 }
-.muted .pattern:not(.queued) {
+.inaudible .pattern:not(.queued) {
   background: #142736;
   color: #d4e2eb;
 }
-.muted .pattern.active {
+.inaudible .pattern.active {
   background: #1b5261;
   color: #e2f8fc;
 }
