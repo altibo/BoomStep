@@ -34,10 +34,10 @@ const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
 <section id="performance" aria-label="Orbit Deck Performance">
-<header><h1>BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select></div></header><div class="package-meta" id="pack-meta"></div><p class="gesture-guide">Ziehen wählt · loslassen merkt vor.<br>Nach oben/unten herausziehen verwirft.</p>
-<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: ziehen wählt, loslassen merkt vor; mehr als 24 Pixel nach oben oder unten herausziehen verwirft; Escape bricht ab">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><div class="track-status"><span id="name-${i}"></span><span class="pending" id="pending-${i}" aria-live="polite"></span></div><div class="track-bottom">${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
-<section class="master" aria-label="Direkte Mastereffekte"><h2>MASTER</h2>${slider("FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
-<section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><p class="phrase-info">8-Takt-Phrase · 4 Akkorde × 2</p><div class="orbit-deck"><strong id="xy-label">MASTER-ECHO</strong><div class="xy-axis">Dunkel ← Farbe → Hell</div><div class="orbit-visual"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
+<header><h1>BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span class="package-meta" id="pack-meta"></span></div></header>
+<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span class="track-short-name" id="name-${i}"></span></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: ziehen wählt, loslassen merkt vor; mehr als 24 Pixel nach oben oder unten herausziehen verwirft; Escape bricht ab">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom">${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
+<div class="mix-strip" aria-label="Master und Special-Pegel"><section class="master" aria-label="Direkte Mastereffekte">${slider("M-FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section><div class="special-level">${slider("HITPEGEL", "specialLevel", session.specialLevel)}</div></div>
+<section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><div class="orbit-deck"><strong id="xy-label" class="sr-only">MASTER-ECHO</strong><div class="xy-axis">Farbe: dunkel ↔ hell</div><div class="orbit-visual"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
   { length: 8 },
   (_, i) => {
     const a = orbitPoint(i / 8 + 0.014),
@@ -49,13 +49,13 @@ app.innerHTML = `<main>
   return `<text x="${p.x}" y="${p.y + 3}">${i + 1}</text>`;
 }).join(
   "",
-)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div></div><div class="xy-depth">↑ Effektstärke</div><div id="xy-hint">Loslassen: XY neutral</div><div id="orbit-status">Takt 1/8 · Beat 1</div></div><div class="fx-pads" role="group" aria-label="Master-Effektmodus"><button data-fx="echo">MASTER-ECHO<span>3/16 · Feedback</span></button><button data-fx="flanger">FLANGER<span>Moduliert</span></button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippen: 1/16</span></button><button data-fx="drive">DRIVE<span>Sättigung</span></button></div></section>
-<section class="specials" aria-label="Einmalige Live-Specials"><div class="specials-head"><h2>SPECIALS <small>Tippen oder streichen</small></h2>${slider("SPECIAL-PEGEL", "specialLevel", session.specialLevel)}</div><div class="special-pads" id="special-board" aria-label="Sechs Einmal-Pads: über Feldgrenzen streichen spielt je einen Hit, Halten wiederholt nicht">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}<span>${p.hint}</span></button>`).join("")}</div></section>
-<div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div><p class="reset-help">FX AUS: Filter, Echo, Hall, Drive, Pump &amp; XY neutral. Nachklang klingt aus; Schutzlimiter bleibt.</p>
+)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div></div><div class="xy-depth" id="xy-hint">↑ Tiefe · loslassen neutral</div></div><div class="fx-right"><div class="fx-pads" role="group" aria-label="Master-Effektmodus"><button data-fx="echo">MASTER-ECHO</button><button data-fx="flanger">FLANGER</button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippen: 1/16</span></button><button data-fx="drive">DRIVE</button></div><div class="performance-status"><div id="orbit-status">Takt 1/8 · Akkord 1/4</div><div id="interaction-status" role="status">Pattern ziehen · Hits streichen</div></div></div></section>
+<section class="specials" aria-label="Einmalige Live-Specials"><h2 class="specials-caption">SPECIALS <small>Tippen / streichen · einmalig</small></h2><div class="special-pads" id="special-board" aria-label="Sechs Einmal-Pads: über Feldgrenzen streichen spielt je einen Hit, Halten wiederholt nicht">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}</button>`).join("")}</div></section>
+<div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div>
 </section>
 <div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen markiert nur eine Auswahl, ohne sie abzuspielen; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Band ziehen zeigt Abbrechen; dort loslassen verwirft nur die Auswahl. Zurück ins Band ziehen erlaubt wieder Vormerken. Escape, Systemabbruch oder Fingerverlust verwerfen ebenfalls. Keine Hörvorschau. Auf Band, XY und Specials ist Scrollen zugunsten der Musikgeste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = aktives Pattern/gewählter FX-Modus; ausschließlich Amber = vorgemerkter Patternwechsel; weiß = unverbindliche Ziehauswahl. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. SPECIAL-PEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · eigene Synthese</footer></main>`;
+<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p class="reset-help">FX AUS: Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen markiert nur eine Auswahl, ohne sie abzuspielen; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Band ziehen zeigt Abbrechen; dort loslassen verwirft nur die Auswahl. Zurück ins Band ziehen erlaubt wieder Vormerken. Escape, Systemabbruch oder Fingerverlust verwerfen ebenfalls. Keine Hörvorschau. Auf Band, XY und Specials ist Scrollen zugunsten der Musikgeste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = aktives Pattern/gewählter FX-Modus; ausschließlich Amber = vorgemerkter Patternwechsel; weiß = unverbindliche Ziehauswahl. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. HITPEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Die gemeinsame Reglerzeile enthält M-FILTER, Hall, Drive, Pump und HITPEGEL. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · eigene Synthese</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -93,10 +93,10 @@ function refresh() {
     })
     .join("");
   $("#orbit-status").textContent =
-    `TAKT ${orbit.bar + 1}/8 · BEAT ${orbit.beat}${waiting.length ? ` · ${waiting.length} → T${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}`;
+    `Takt ${orbit.bar + 1}/8 · Akkord ${orbit.chord + 1}/4`;
   if (engine.recording)
-    $("#orbit-status").textContent +=
-      ` · REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`;
+    $("#orbit-status").textContent =
+      `Takt ${orbit.bar + 1}/8 · REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`;
   $("#orbit").setAttribute(
     "aria-label",
     `Gemeinsame Phase: Takt ${orbit.bar + 1} von 8, Akkord ${orbit.chord + 1}, Beat ${orbit.beat}${waiting.length ? `, ${waiting.length} vorgemerkte Wechsel an Takt ${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}. Anzeige, kein Seek.`,
@@ -116,11 +116,12 @@ function refresh() {
     const pending = engine.clock.pending.get(i),
       active = engine.running || engine.paused ? pos.variants[i] : t.variant;
     const gesture = ribbonGestures.get(i);
-    $("#name-" + i).textContent = gesture
-      ? gesture.cancel
-        ? "Abbrechen · loslassen verwirft"
-        : `${gesture.variant + 1} gewählt · loslassen vormerken`
-      : `${engine.running ? "Spielt" : engine.paused ? "Pause" : "Auswahl"}: ${namesFor(session.pack, i)[active]}`;
+    $("#name-" + i).textContent = namesFor(session.pack, i)[active];
+    $("#name-" + i).setAttribute(
+      "aria-label",
+      `${TRACKS[i]}: aktives Pattern ${active + 1}, ${namesFor(session.pack, i)[active]}`,
+    );
+    $("#name-" + i).title = namesFor(session.pack, i)[active];
     const band = $(`[data-ribbon="${i}"]`);
     band.classList.toggle("canceling", !!gesture?.cancel);
     band.dataset.gesture = gesture
@@ -139,7 +140,10 @@ function refresh() {
       const v = Number(el.dataset.variant);
       const name = namesFor(session.pack, i)[v];
       el.title = name;
-      el.setAttribute("aria-label", `${TRACKS[i]}: ${name}, Pattern ${v + 1}`);
+      el.setAttribute(
+        "aria-label",
+        `${TRACKS[i]}: ${name}, Pattern ${v + 1}${pending?.variant === v ? `, ab Takt ${Math.floor((pending.at % 128) / 16) + 1}` : ""}`,
+      );
       el.classList.toggle("active", v === active);
       el.classList.toggle("queued", pending?.variant === v);
       el.setAttribute("aria-pressed", String(v === active));
@@ -148,7 +152,7 @@ function refresh() {
       el.querySelector(".pattern-cue").textContent = preview
         ? "Wahl"
         : pending?.variant === v
-          ? "Takt"
+          ? `ab T${Math.floor((pending.at % 128) / 16) + 1}`
           : v === active
             ? engine.running
               ? "Spielt"
@@ -162,6 +166,23 @@ function refresh() {
       );
     });
   });
+  const gestures = [...ribbonGestures.entries()];
+  if (gestures.length) {
+    const [track, g] = gestures.find(([, g]) => g.cancel) || gestures[0];
+    $("#interaction-status").textContent =
+      gestures.length > 1
+        ? `${gestures.length} Auswahlen · ${gestures.filter(([, g]) => g.cancel).length} Abbruch`
+        : g.cancel
+          ? `${TRACKS[track]}: Abbrechen – loslassen`
+          : `${TRACKS[track]}: ${g.variant + 1} wählen – loslassen`;
+  } else if (engine.clock.pending.size) {
+    const [track, q] = [...engine.clock.pending][0];
+    $("#interaction-status").textContent =
+      engine.clock.pending.size === 1
+        ? `${TRACKS[track]}: ${q.variant + 1} ab Takt ${Math.floor((q.at % 128) / 16) + 1}`
+        : `${engine.clock.pending.size} Wechsel ab Takt ${Math.floor((q.at % 128) / 16) + 1}`;
+  } else
+    $("#interaction-status").textContent = "Pattern ziehen · Hits streichen";
   document
     .querySelectorAll("[data-fx]")
     .forEach((el) =>
@@ -187,8 +208,8 @@ function refresh() {
           ? "FLANGER"
           : session.fx.mode.toUpperCase();
   $("#xy-hint").textContent = session.fx.hold
-    ? "HOLD hält XY"
-    : "Loslassen: XY neutral";
+    ? "↑ Tiefe · HOLD hält"
+    : "↑ Tiefe · loslassen neutral";
   $("#gate-label").textContent =
     `1/${session.fx.division} · tippen: 1/${session.fx.division === 8 ? 16 : 8}`;
   $("#xy-dot").style.left = `${14 + session.fx.x * 72}%`;

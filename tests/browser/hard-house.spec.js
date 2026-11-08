@@ -44,7 +44,9 @@ test("all performance controls are inline; portrait layouts are visible and touc
     }
     const bounds = await page.locator("#performance").boundingBox();
     console.log("Performance layout", width, height, bounds);
-    expect(bounds.y + bounds.height).toBeGreaterThan(height);
+    if (width === 390 && height === 844)
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(840);
+    else expect(bounds.y + bounds.height).toBeGreaterThan(height);
     await page.screenshot({
       path: `test-results/artifacts/hard-house-${width}x${height}.png`,
       fullPage: true,

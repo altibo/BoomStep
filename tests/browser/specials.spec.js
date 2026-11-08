@@ -261,7 +261,7 @@ test("pads work from the offline PWA without starting its loop", async ({
     "running",
   );
 });
-test("readable specials and musical controls stay inline; all tested viewports scroll honestly", async ({
+test("readable specials and controls fit 390x844; smaller viewports scroll honestly", async ({
   page,
 }) => {
   for (const [width, height] of [
@@ -280,7 +280,9 @@ test("readable specials and musical controls stay inline; all tested viewports s
     expect(await page.locator("input[data-key]").count()).toBe(17);
     const b = await page.locator("#performance").boundingBox();
     console.log("Specials layout", width, height, b);
-    expect(b.y + b.height).toBeGreaterThan(height);
+    if (width === 390 && height === 844)
+      expect(b.y + b.height).toBeLessThanOrEqual(840);
+    else expect(b.y + b.height).toBeGreaterThan(height);
     for (const selector of [
       ".special-pad",
       ".pattern",

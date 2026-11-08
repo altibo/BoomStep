@@ -4,13 +4,11 @@ const out = "test-results/gui-artifacts";
 test.beforeEach(async () => mkdir(out, { recursive: true }));
 const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 async function move(page, selector) {
-  await page
-    .locator(selector)
-    .evaluate((el) =>
-      (el.closest(".specials") || el.closest(".track") || el).scrollIntoView({
-        block: "center",
-      }),
-    );
+  await page.locator(selector).evaluate((el) =>
+    (el.closest(".specials") || el.closest(".track") || el).scrollIntoView({
+      block: "center",
+    }),
+  );
   const p = center(await page.locator(selector).boundingBox());
   await page.mouse.move(p.x, p.y);
   return p;
@@ -260,7 +258,9 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
     ).toBe(true);
     const box = await page.locator("#performance").boundingBox();
     console.log("Orbit layout", width, height, box);
-    expect(box.y + box.height).toBeGreaterThan(height);
+    if (width === 390 && height === 844)
+      expect(box.y + box.height).toBeLessThanOrEqual(840);
+    else expect(box.y + box.height).toBeGreaterThan(height);
     const bad = await page
       .locator(
         ".pattern,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",

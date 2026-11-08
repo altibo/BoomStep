@@ -26,3 +26,11 @@ Direkte Volume/Filter/Echo-Regler, Mute/Solo, Mastereffekte, sechs Specials, REC
 - **Zeit:** sichtbare „8-Takt-Phrase · 4 Akkorde ×2“, kein behaupteter unabhängiger Seek/Loop. SAVE speichert vorgemerkte Pattern bewusst als neue Startauswahl. Sessionformat und Soundengine bleiben unverändert.
 
 26 Unit-/32 Browserfälle (bestehende Regressionen erhalten), inklusive echter Mouse-/Touchgesten, Hoch-/Runterabbruch, 24px-Toleranz, Reentry/Commit, Escape, Systemcancel/lost capture, Mindestschriftgröße/Clipping, getrennte Farben und echte Aufnahme. Genaue aktuelle Layoutmessungen und Screenshots in README bzw. lokalen QA-Artefakten. Safari/Echtgerät/Hörabnahme weiterhin unbestätigt.
+
+## Reviewkorrektur R3 (weiter nur lokal)
+
+Die R2-Höhe um 1236px war eine echte Regression. R3 entfernt Redundanzen statt Schrift oder Touchziele zu verkleinern: keine zusätzliche Track-Statuszeile, Patternname im Spurkopf (voller Name per ARIA), zentrale Auswahl-/Abbruch-/Pending-Meldung, Packdaten im 44px-Header, vier Masterfader plus HITPEGEL in einer gemeinsamen 44px-Zeile. Die sechs Specials sind wieder eine klare 3×2-Bank mit 48px hohen Pads; die Überschrift erklärt Einmal-/Strum-Verhalten. Dateiaktionen/Hilfe stehen erst hinter dem musikalischen Bereich.
+
+Der Performancebereich braucht 184px, enthält ein 96×88px-XY-Feld, 144px-Orbit mit effektiv 12,6px-Ziffern und vier 67px-FX-Pads. Achsen bleiben außerhalb des Pucks; Phase und Gestenfeedback besitzen getrennte, nicht überlappende Statusflächen, lange Abbruchmeldungen dürfen bei 320px auf zwei 11px-Zeilen umbrechen. Kein CSS-Kleinskalieren bei kleineren Viewports. Amber-, Cancel-, Routing- und Reset-Verträge aus R2 bleiben unverändert.
+
+R3 ergänzt die bisherigen Regressionen um echte Bounds aller 59 musikalischen Ziele (mindestens 44×44, alle bis maximal y840 auf 390×844), tatsächlich gerenderte SVG-Schriftgröße und einen 320px-Langstatus-/Aufnahmetest. Bestehende Layouttests wurden von der R2-Scrollpflicht auf die präzise Passform bei 390×844 umgestellt; kleine Screens müssen weiterhin ehrlich scrollen. Aktuelle Messergebnisse/Dateipfade stehen in README und lokalem R3-Reviewbericht. Weiter kein Push/Deployment bis zur unabhängigen Freigabe.

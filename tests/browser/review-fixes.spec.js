@@ -37,7 +37,9 @@ test("intentional upper/lower drag cancel preserves pending, margin tolerates ji
       "data-gesture",
       "cancel",
     );
-    await expect(page.locator("#name-1")).toContainText("Abbrechen");
+    await expect(page.locator("#interaction-status")).toContainText(
+      "Abbrechen",
+    );
     if (direction === -1)
       await page.screenshot({
         path: `${out}/readable-cancel.png`,
@@ -129,7 +131,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     }
     const clipped = await page
       .locator(
-        ".mini span,.pattern-cue,.track-status,.special-pad,.fx-pads button",
+        ".mini span,.pattern-cue,.special-pad,.fx-pads button,#interaction-status,#orbit-status",
       )
       .evaluateAll((es) =>
         es
@@ -149,6 +151,30 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     expect(clipped).toEqual([]);
     const box = await page.locator("#performance").boundingBox();
     console.log("Readable layout", width, height, box);
+    if (width === 390 && height === 844)
+      expect(box.y + box.height).toBeLessThanOrEqual(840);
+    const physicalFont = await page
+      .locator(".orbit-numbers text")
+      .evaluateAll((es) =>
+        es.map(
+          (e) =>
+            parseFloat(getComputedStyle(e).fontSize) *
+            Math.abs(e.getScreenCTM().a),
+        ),
+      );
+    expect(Math.min(...physicalFont)).toBeGreaterThanOrEqual(11);
+    const labelsOutsideFields = await page
+      .locator(".mini span")
+      .evaluateAll((es) =>
+        es
+          .filter((e) => {
+            const a = e.getBoundingClientRect(),
+              b = e.closest(".mini").getBoundingClientRect();
+            return a.left < b.left - 1 || a.right > b.right + 1;
+          })
+          .map((e) => e.textContent),
+      );
+    expect(labelsOutsideFields).toEqual([]);
     await page.screenshot({
       path: `${out}/readable-${width}x${height}.png`,
       fullPage: true,
@@ -179,6 +205,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     path: `${out}/readable-hold-muted-solo.png`,
     fullPage: true,
   });
+  await page.screenshot({ path: `${out}/viewport-hold-muted-solo.png` });
   await page.waitForFunction(
     () => window.boomstep.engine.clock.step % 16 === 2,
   );
@@ -193,6 +220,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     path: `${out}/readable-playing-pending.png`,
     fullPage: true,
   });
+  await page.screenshot({ path: `${out}/viewport-playing-pending.png` });
   await expect(
     page.locator('[data-strip="0"][data-key="delay"]').locator(".."),
   ).toContainText("SPUR-ECHO");
@@ -216,4 +244,76 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     hold: false,
     delays: [0, 0, 0, 0],
   });
+});
+
+test("R3 all musical targets have real 44px bounds and fit above 840px on 390x844", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const geometry = await page
+    .locator(
+      ".pattern,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#pack",
+    )
+    .evaluateAll((es) =>
+      es.map((e) => {
+        const b = e.getBoundingClientRect();
+        return {
+          target: e.id || e.getAttribute("aria-label") || e.textContent.trim(),
+          x: b.x,
+          y: b.y,
+          width: b.width,
+          height: b.height,
+          right: b.right,
+          bottom: b.bottom,
+        };
+      }),
+    );
+  console.log("R3 real musical bounds", JSON.stringify(geometry));
+  for (const b of geometry) {
+    expect(b.width).toBeGreaterThanOrEqual(44);
+    expect(b.height).toBeGreaterThanOrEqual(44);
+    expect(b.x).toBeGreaterThanOrEqual(0);
+    expect(b.y).toBeGreaterThanOrEqual(0);
+    expect(b.right).toBeLessThanOrEqual(390);
+    expect(b.bottom).toBeLessThanOrEqual(840);
+  }
+  expect(await page.locator(".track-status").count()).toBe(0);
+  expect(await page.locator(".master input").count()).toBe(4);
+  expect(await page.locator("[data-key=specialLevel]").count()).toBe(1);
+});
+
+test("320px long cancel and recording status wrap without overflow or covering the specials", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto("/");
+  await page.locator("#play").click();
+  await page.locator("#play").click();
+  const r = await dragStart(page);
+  await page.mouse.move(r.x + r.width * 0.4, r.y - 30);
+  await expect(page.locator("#interaction-status")).toContainText("Abbrechen");
+  const measure = async () => {
+    const m = await page.evaluate(() => {
+      const e = document.querySelector("#interaction-status"),
+        p = document.querySelector("#orbit-status"),
+        a = e.getBoundingClientRect(),
+        b = document.querySelector(".specials-caption").getBoundingClientRect();
+      return {
+        overflow: document.documentElement.scrollWidth > innerWidth,
+        clipped:
+          e.scrollHeight > e.clientHeight || p.scrollHeight > p.clientHeight,
+        bottom: a.bottom,
+        caption: b.top,
+      };
+    });
+    expect(m.overflow).toBe(false);
+    expect(m.clipped).toBe(false);
+    expect(m.bottom).toBeLessThanOrEqual(m.caption);
+  };
+  await measure();
+  await page.mouse.up();
+  await page.locator("#record").click();
+  await expect(page.locator("#orbit-status")).toContainText("REC");
+  await measure();
+  await page.locator("#record").click();
 });

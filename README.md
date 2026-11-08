@@ -4,14 +4,14 @@
 
 Neues eigenes Standardpaket **Berlin Bounce** und **sechs einmalige Live-Specials**. Vier laufende Spuren, **alle musikalischen Regler direkt auf einer Oberfläche**, ein XY-Feld zum Spielen statt verschachtelter Menüs. Kopfhörer empfohlen. Die Versionen bleiben über Git-Historie und separate Feature-/Deploybranches nachvollziehbar.
 
-## Orbit Deck · lokaler Reviewstand 3.1
+## Orbit Deck · lokaler Reviewstand 3.1 / R3
 
 Noch **nicht veröffentlicht**: der aktuelle UI-Stand wartet auf unabhängigen Screenshot-/Interaktionsreview. Die öffentliche Pages-Version bleibt bis zur Freigabe unverändert.
 
 - **Patternbänder**: vier diskrete große Segmente je Spur bleiben direkt tippbar. Ziehen = weiße Vorschau; Loslassen = letzte Variante taktgenau vormerken; Mehr als 24px nach oben/unten herausziehen = sichtbares Abbrechen, dort Loslassen verwirft; Reentry erlaubt wieder Vormerken. Escape/Systemcancel/lost capture verwerfen ebenfalls, vorhandene Pending-Wahl bleibt. Keine Hörvorschau. Cyan/Auswahl bzw. Spielt, ausschließlich Amber/vorgemerkt und Weiß/Ziehauswahl trennen die Zustände. Pfeile/Home/End und Enter/Space bleiben nutzbar. Kein behauptetes kontinuierliches Klangmorphing.
 - **Strum Specials**: über die sechs sichtbaren Pads streichen; jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten wiederholt nie. Fingerhistorien sind unabhängig, Pointercancel räumt die Geste auf, endliche Sounds klingen aus. Tastatur weiterhin möglich.
 - **Audiozeit-Orbit**: echte gemeinsame achttaktige Phase, Audiozeit-Playhead und Pending-Wechselmarken; kein CSS-Spinner, kein Seek. Bestehendes XY-Feld im Orbit und vier direkte FX-Pads daneben. Reduced Motion zeigt nur Taktwechsel statt kontinuierlichem Kopf. Keine neuen Sound-/Sessionparameter, unverändertes validiertes V1–3-Format.
-- Lesbare Reviewkorrektur: alle musikalischen Labels mindestens 11px, Haupt-/Statuslabels überwiegend 12px; keine Skalierung für kleine Viewports. Achsen außerhalb des XY-Feldes; größerer vertikaler Scrollbedarf wird nicht versteckt. Amber nur für Pending; gewählter FX-Modus/HOLD cyan, REC rot. **SPUR-ECHO** ist der nasse Pegel des jeweiligen Spurdelays; **MASTER-ECHO** ist das zusätzliche globale XY-Delay. **FX AUS** setzt alle regelbaren Effekte/Filter neutral, nicht den festen Schutzlimiter; vorhandene Tails klingen aus.
+- Lesbare Reviewkorrektur: alle musikalischen Labels mindestens 11px, Haupt- und Padlabels 12px, kompakte Status-/Achsenlabels 11px; keine Skalierung für kleine Viewports. Achsen außerhalb des 96×88px-XY-Feldes. R3 entfernt die vier zusätzlichen Statuszeilen: 44px Pattern-/Spurkopf plus 44px Fader pro Spur. Masterfilter/Hall/Drive/Pump und HITPEGEL teilen eine direkt sichtbare 44px-Zeile. Der 184px-Performancebereich enthält den lesbaren Orbit, 67px-FX-Pads und getrennte Phase-/Gestenmeldungen; Specials sind 48px hoch. Die Musik passt bei 390×844 vollständig, kleinere Viewports scrollen ehrlich. Amber nur für Pending; gewählter FX-Modus/HOLD cyan, REC rot. **SPUR-ECHO** ist der nasse Pegel des jeweiligen Spurdelays; **MASTER-ECHO** ist das zusätzliche globale XY-Delay. **FX AUS** setzt alle regelbaren Effekte/Filter neutral, nicht den festen Schutzlimiter; vorhandene Tails klingen aus.
 - SAVE übernimmt bewusst vorgemerkte Pattern als Startauswahl beim nächsten Öffnen.
 - Vier gelesene Herstellerquellen, übernommene Prinzipien und bewusst verworfene Ideen: [GUI-Recherche](docs/gui-research.md). Keine Behauptung einer neuen Erfindung; keine kopierten Markenlayouts oder Assets.
 
@@ -34,7 +34,7 @@ ANUUK wurde anhand seines [offiziellen Amplia-Artistprofils](https://www.ampliab
 
 **BARK HIT / BASS SHOT / ROLL FILL / UP SWEEP / IMPACT / LASER**: Ein Tap startet genau ein finites Klangereignis. Kein Toggle, kein dauerhaftes Loop und keine Spurpattern-Ersetzung. Bark/Bass sind tonal an aktuelle Tonart/Akkordphase gebunden; der Roll Fill startet sofort frei im Pakettempo, ohne versteckte Queue. Rise/Impact/Laser enden von selbst. Ein heller Padzustand zeigt den Trigger bzw. laufenden Sound.
 
-**SPECIAL LEVEL** regelt alle sechs Pads direkt. Die Specials gehen durch denselben Masterfilter, Drive, Flanger, Echo, Hall, Gate, Kompressor und Safety-Ausgang wie der Jam und sind wirklich in der WAV-Aufnahme enthalten. Spur-Mute/Solo betrifft den Loop, nicht den separaten Special-Bus; PUMP duckt weiterhin die Loopspuren zur Kick.
+**HITPEGEL** regelt alle sechs Pads direkt. Die Specials gehen durch denselben Masterfilter, Drive, Flanger, Echo, Hall, Gate, Kompressor und Safety-Ausgang wie der Jam und sind wirklich in der WAV-Aufnahme enthalten. Spur-Mute/Solo betrifft den Loop, nicht den separaten Special-Bus; PUMP duckt weiterhin die Loopspuren zur Kick.
 
 Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, startet aber **nicht heimlich den Loop**. Bei pausiertem Jam bleibt der Loopbus stumm; vorhandene Lookahead-Ereignisse werden beim Fortsetzen um die vergangene Audiozeit verschoben, ohne Clock-/Patternphase voranzusetzen. Eine endliche One-Shot-Hüllkurve bleibt nicht an Pointer-Hold gebunden. Mehrere Pads/Finger und wiederholte Taps sind erlaubt. Bis zu **acht Soundgruppen** überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung, statt neue Taps still zu ignorieren. Alle Quellen und Gruppen werden nach Ende freigegeben. **■** stoppt Loop und Specials; **FX AUS** bleibt ein reiner Effektreset.
 
@@ -42,7 +42,7 @@ Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, s
 
 **Pro Spur:** vier große Pattern-Tasten, **STUMM**, **SOLO**, direkt darunter **PEGEL / FILTER / SPUR-ECHO**. Cyan spielt, amber/gestrichelt ist für den nächsten noch planbaren Takt vorgemerkt. Ein erneuter Tap aufs aktive Pattern löscht die Vormerkung. Die globale Akkordphase bleibt erhalten. Der 100-ms-Lookahead kann sehr späte Taps erst zum folgenden Takt übernehmen.
 
-**Master:** FILTER, HALL, DRIVE und PUMP sind immer sichtbar.
+**Master:** M-FILTER, HALL, DRIVE und PUMP sind immer sichtbar; HITPEGEL liegt als fünfter Fader in derselben Zeile.
 
 **XY-Performancefeld:**
 
@@ -59,12 +59,14 @@ Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, s
 
 Automatisierte Chromium-Prüfung in CSS-Pixeln:
 
-| Viewport       | Musikbereich einschließlich Transport | Verhalten                                                        |
-| -------------- | ------------------------------------: | ---------------------------------------------------------------- |
-| 390 × 844      |                 unten bei ca. 1236 px | vertikal scrollen; Schrift statt künstlicher Ein-Screen-Passform |
-| 390 × 700      |                 unten bei ca. 1236 px | vertikal scrollen                                                |
-| 320 × 568      |                 unten bei ca. 1523 px | vertikales Scrollen, keine versteckten Musikregler               |
-| 844 × 390 quer |                  unten bei ca. 922 px | vertikales Scrollen                                              |
+| Viewport       | Musikbereich einschließlich Transport | Verhalten                                                               |
+| -------------- | ------------------------------------: | ----------------------------------------------------------------------- |
+| 390 × 844      |                      unten bei 822 px | alle musikalischen Controls sichtbar; kein Musik-Scroll nötig           |
+| 390 × 700      |                      unten bei 822 px | 122px Musik-Scroll                                                      |
+| 320 × 568      |                      unten bei 936 px | 368px Musik-Scroll; zusätzliche Namenszeilen und zweireihiger Transport |
+| 844 × 390 quer |                      unten bei 638 px | 248px Musik-Scroll                                                      |
+
+Nichtmusikalische Dateiaktionen/Hilfe liegen dahinter und dürfen unter dem Fold stehen. Die 59 direkten musikalischen Trefferflächen sind per echten DOM-Bounds geprüft; zusätzlich prüft die Suite Fontgrößen, sichtbare Labels, Clipping und Achsenabstände. Orbit-Ziffern: 14 SVG-Einheiten bei 144/160-Darstellung = effektiv 12,6 CSS-Pixel, ebenfalls gegen den tatsächlich gerenderten Maßstab geprüft. Lange Patternnamen dürfen nur in der schmalen Namenszelle auf zwei Zeilen gekürzt werden; vollständiger Name bleibt über ARIA und die Pattern-Tasten verfügbar. Pending steht am Band und als verständlicher Text in der zentralen Meldung, Details zusätzlich für Screenreader.
 
 Alle direkten musikalischen Eingabeflächen — Pattern, STUMM/SOLO, FX, Specials, Transport, Paketauswahl, XY und alle 17 Fader — haben **mindestens 44×44 CSS-Pixel**. Fader sind echte 44px hohe Felder, keine überlappenden vergrößerten Trefferzonen. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
 
@@ -96,7 +98,7 @@ npm run lint
 npm run build                 # statische PWA in dist/
 npm run preview               # Produktionsvorschau, Port 4173
 npx playwright install chromium
-npm run test:browser           # 32 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
+npm run test:browser           # 34 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
 npm audit --omit=dev
 ```
 
@@ -104,4 +106,4 @@ npm audit --omit=dev
 
 Node-Tests prüfen zusätzlich die sechs distinkten finiten Pläne, F-Moll und indexerhaltende V2-Migration. Browser-Tests ergänzen Standalone-Taps ohne Loopstart, Retrigger/Keyboard/achtfaches Voice-Stealing und Cleanup, unveränderte Clock/Patterns, Pause mit Specials, echte Special-PCM-Aufnahme bei stummen Loopspuren, Offline-Pads und neue Layoutgrößen. Die bisherige Suite bleibt erhalten. Node-Tests erhalten die früheren Clock-/WAV-/Capture-Regressionen und prüfen zusätzlich Migration, FX-Ziele, Release/Hold/DRY, Gatephase, Viertaktphase/Achttaktfills und unterschiedliche Patterns. Browser-Tests erhalten die früheren Audio-/Session-/Offline-Prüfungen und ergänzen Layouts, XY-Gesten, echte live aufgenommene Drive-Änderung, 48 Offline-Renders mit Signalunterschieden zwischen allen Hard-House-Varianten, begrenzte Peaks und hörbare Signaländerungen durch alle Effektwege. Native DSP-Ausgaben dürfen kleine numerische Abweichungen haben; Kompositionsereignisse bleiben deterministisch.
 
-`test-results/gui-artifacts/` enthält die drei neuen Viewport-Screenshots, Playing/Pending/FX- und Recording-Ansicht sowie `orbit-strum-live.wav`. Neue Browserfälle prüfen Preview/Commit/Cancel/lost capture, Tastatur, zwei simultane Finger, Audiozeit-Orbit/Pause, tatsächliche Strum-/Drive-PCM-Aufnahme und Idle-/Reduced-Motion-Verhalten. `test-results/artifacts/` enthält weiterhin Screenshots, einen Signalbericht, echte Live-WAVs, drei 14-sekündige synthetisierte Demo-WAVs, eine 35-sekündige eigene Berlin-Bounce-Performance mit Specials und eine tatsächliche Special-/FX-Liveaufnahme. Das sind lokale Testartefakte, keine automatisch publizierte Audio-Bibliothek. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
+`test-results/readable-artifacts/` enthält die R3-Viewport-/Fullpage-Ansichten, Playing/Pending und HOLD/Stumm/Solo. Der zusätzliche R3-Test protokolliert alle 59 echten Control-Bounds. `test-results/gui-artifacts/` enthält die drei neuen Viewport-Screenshots, Playing/Pending/FX- und Recording-Ansicht sowie `orbit-strum-live.wav`. Neue Browserfälle prüfen Preview/Commit/Cancel/lost capture, Tastatur, zwei simultane Finger, Audiozeit-Orbit/Pause, tatsächliche Strum-/Drive-PCM-Aufnahme und Idle-/Reduced-Motion-Verhalten. `test-results/artifacts/` enthält weiterhin Screenshots, einen Signalbericht, echte Live-WAVs, drei 14-sekündige synthetisierte Demo-WAVs, eine 35-sekündige eigene Berlin-Bounce-Performance mit Specials und eine tatsächliche Special-/FX-Liveaufnahme. Das sind lokale Testartefakte, keine automatisch publizierte Audio-Bibliothek. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
