@@ -6,7 +6,7 @@ Das Repository ist nach ausdrücklicher Freigabe öffentlich. GitHub Pages verwe
 
 ## Aktualisieren
 
-1. Featurebranch vom aktuellen main anlegen, Quellcode testen und als PR bereitstellen. Kein automatischer Main-Merge.
+1. Featurebranch vom aktuellen integrierten Stand anlegen; falls der aktive Vorgänger-PR noch offen ist, vom tatsächlich live verwendeten Featurestand abzweigen und den neuen PR darauf stapeln, Quellcode testen und als PR bereitstellen. Kein automatischer Main-Merge.
 2. `npm ci && npm test && npm run lint && npm run build && npm run test:browser`.
 3. `dist/` prüfen: nur index.html, gehashte JS/CSS, Manifest, Icons, recorder.js und sw.js. Keine Source Maps, Zugangsdaten oder Entwicklungsdateien.
 4. Im separaten gh-pages-Worktree aktuellen Remote-Stand vorwärts holen. Nur den geprüften `dist/`-Inhalt plus `.nojekyll` als normalen neuen Commit veröffentlichen. **Kein Forcepush und kein History-Rewrite.** Vorherige Deploycommits bleiben erhalten.
@@ -18,4 +18,8 @@ Der angemeldete CLI-Zugang braucht kein erweitertes Workflow-Scope: die App wird
 
 ## Echte Geräteabnahme
 
-Auf iPhone/Safari und Android/Chrome: Ton, Offbeat-Kick/Bass, schnelle Patternwechsel über Takt 2/3, Vordergrund-Pause/Resume, XY-Hold/Release/DRY, WAV samt FX in anderer Audio-App anhören, Sessionimport und Offline-Start prüfen. Browser-Schriftvergrößerung und Browserleisten können die benötigte Bildschirmhöhe ändern. Die automatisierte Chromium-Abnahme ist kein behaupteter iPhone-Hörtest.
+Auf iPhone/Safari und Android/Chrome: Ton, federnde Kick/Bass, alle sechs Specials einzeln und gleichzeitig (auch bei angehaltenem Jam), schnelle Patternwechsel über Takt 2/3, Vordergrund-Pause/Resume, XY-Hold/Release/DRY, WAV samt FX in anderer Audio-App anhören, Sessionimport und Offline-Start prüfen. Browser-Schriftvergrößerung und Browserleisten können die benötigte Bildschirmhöhe ändern. Die automatisierte Chromium-Abnahme ist kein behaupteter iPhone-Hörtest.
+
+## Quellenstand V3
+
+Berlin Bounce + Specials baut auf dem noch nicht integrierten Hard-House-PR auf. Veröffentlichung des getesteten Featurebuilds auf gh-pages benötigt keinen Main-Merge. Sessionversion 3 erhält alle V2-Paketindizes; neues Paket am Ende. Stilrecherche und klare Abgrenzung zur Künstlerreferenz: [docs/style-research.md](../docs/style-research.md).

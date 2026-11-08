@@ -1,3 +1,4 @@
+import { specialPlan, oldestSpecial } from "./specials.js";
 import {
   PatternClock,
   PACKS,
@@ -25,6 +26,9 @@ export class Engine {
     this.recording = false;
     this.timeline = [];
     this.sources = new Set();
+    this.loopSources = new Set();
+    this.specialGroups = [];
+    this.specialTriggerCount = 0;
   }
   createGraph(c) {
     this.ctx = c;
@@ -105,6 +109,11 @@ export class Engine {
     this.ceiling = c.createWaveShaper();
     this.ceiling.curve = ceilingCurve();
     this.limiter.connect(this.ceiling);
+    this.loopBus = c.createGain();
+    this.loopBus.connect(this.master);
+    this.specialGain = c.createGain();
+    this.specialGain.gain.value = 0;
+    this.specialGain.connect(this.master);
     this.strips = this.session.tracks.map((_, i) => {
       const filter = c.createBiquadFilter();
       filter.type = "lowpass";
@@ -124,19 +133,23 @@ export class Engine {
       filter.connect(gain);
       gain.connect(duck);
       duck.connect(pan);
-      pan.connect(this.master);
+      pan.connect(this.loopBus);
       duck.connect(send);
       send.connect(delay);
       delay.connect(feedback);
       feedback.connect(delay);
       delay.connect(returnGain);
-      returnGain.connect(this.master);
+      returnGain.connect(this.loopBus);
       return { filter, gain, duck, send: returnGain, delay };
     });
     this.noise = noiseBuffer(c);
     this.applyMix();
   }
-  async init() {
+  init() {
+    if (!this.initPromise) this.initPromise = this.initialize();
+    return this.initPromise;
+  }
+  async initialize() {
     if (this.ctx) return;
     const C = window.AudioContext || window.webkitAudioContext;
     if (!C) throw new Error("Dieser Browser unterstützt Web Audio nicht.");
@@ -173,6 +186,12 @@ export class Engine {
         (c.state === "suspended" || c.state === "interrupted") &&
         this.running
       ) {
+        this.frozenPosition = this.position();
+        this.pauseAnchor = {
+          time: c.currentTime,
+          nextTime: this.nextTime,
+          timeline: this.timeline.map((p) => ({ ...p })),
+        };
         this.running = false;
         this.paused = true;
         clearInterval(this.timer);
@@ -185,6 +204,20 @@ export class Engine {
     await this.init();
     await this.ctx.resume();
     if (this.running) return;
+    if (this.pausedWithSpecials) {
+      const shift = this.ctx.currentTime - this.pauseAnchor.time;
+      this.timeline = this.pauseAnchor.timeline.map((p) => ({
+        ...p,
+        time: p.time + shift,
+      }));
+      this.nextTime = this.pauseAnchor.nextTime + shift;
+      const dt = 60 / PACKS[this.session.pack].bpm / 4;
+      for (const p of this.timeline)
+        if (p.time > this.ctx.currentTime)
+          this.scheduleStep(p.step, p.time, dt, p.variants);
+      this.pausedWithSpecials = false;
+    }
+    this.loopBus.gain.setTargetAtTime(1, this.ctx.currentTime, 0.008);
     this.running = true;
     this.nextTime = this.paused
       ? Math.max(this.nextTime, this.ctx.currentTime)
@@ -198,7 +231,13 @@ export class Engine {
     if (!this.ctx) return;
     clearInterval(this.timer);
     this.running = false;
+    this.frozenPosition = this.position();
     this.paused = true;
+    this.pauseAnchor = {
+      time: this.ctx.currentTime,
+      nextTime: this.nextTime,
+      timeline: this.timeline.map((p) => ({ ...p })),
+    };
     await this.ctx.suspend();
     this.onUpdate();
   }
@@ -206,6 +245,8 @@ export class Engine {
     clearInterval(this.timer);
     this.running = false;
     this.paused = false;
+    this.pausedWithSpecials = false;
+    this.pauseAnchor = null;
     if (this.ctx) {
       await this.ctx.resume();
       for (const source of this.sources) {
@@ -254,7 +295,7 @@ export class Engine {
       eventsAt(this.session.pack, i, variants[i], step),
     );
     if (
-      all[0].some((e) => e.kind === "kick") &&
+      all[0].some((e) => e.kind === "kick" || e.kind === "bouncekick") &&
       audible(this.session.tracks, 0) &&
       this.session.tracks[0].volume > 0.001
     )
@@ -285,6 +326,7 @@ export class Engine {
       );
   }
   position() {
+    if (this.paused && this.frozenPosition) return this.frozenPosition;
     if (!this.ctx)
       return { step: 0, variants: this.session.tracks.map((t) => t.variant) };
     return (
@@ -311,6 +353,7 @@ export class Engine {
     ramp(this.echoWet.gain, target.echo);
     ramp(this.flangeWet.gain, target.flanger);
     ramp(this.wet.gain, this.session.reverb * 0.65);
+    ramp(this.specialGain.gain, this.session.specialLevel * 0.55);
     this.strips.forEach((strip, i) => {
       const t = this.session.tracks[i];
       ramp(
@@ -328,7 +371,7 @@ export class Engine {
     for (const p of this.timeline)
       if (p.time >= now) this.scheduleGate(p.step, p.time, dt);
   }
-  note(e, time, dt, dest) {
+  note(e, time, dt, dest, group) {
     return createVoice(
       this.ctx,
       e,
@@ -339,9 +382,88 @@ export class Engine {
       this.noise,
       (source) => {
         this.sources.add(source);
-        source.addEventListener("ended", () => this.sources.delete(source));
+        if (group) group.sources.add(source);
+        else this.loopSources.add(source);
+        source.addEventListener("ended", () => {
+          this.sources.delete(source);
+          this.loopSources.delete(source);
+          if (group) {
+            group.sources.delete(source);
+            if (!group.sources.size) this.finishSpecial(group);
+          }
+        });
       },
     );
+  }
+  finishSpecial(group) {
+    group.gain.disconnect();
+    this.specialGroups = this.specialGroups.filter((g) => g !== group);
+    this.onUpdate();
+    this.idleAfterSpecial();
+  }
+  idleAfterSpecial() {
+    if (this.disposed) return;
+    if (typeof this.ctx?.startRendering === "function") return;
+    clearTimeout(this.specialIdleTimer);
+    if (!this.running && !this.recording && !this.specialGroups.length)
+      this.specialIdleTimer = setTimeout(() => {
+        if (!this.running && !this.recording && !this.specialGroups.length)
+          void this.ctx?.suspend();
+      }, 1500);
+  }
+  releaseSpecial(group) {
+    const now = this.ctx.currentTime;
+    group.gain.gain.cancelScheduledValues(now);
+    group.gain.gain.setTargetAtTime(0, now, 0.004);
+    for (const source of group.sources) {
+      try {
+        source.stop(now + 0.015);
+      } catch {
+        /* Ended. */
+      }
+    }
+    this.specialGroups = this.specialGroups.filter((g) => g !== group);
+  }
+  scheduleSpecial(id, when, step = this.position().step, limit = true) {
+    const plan = specialPlan(id, this.session.pack, step),
+      old = limit ? oldestSpecial(this.specialGroups) : undefined;
+    if (old) this.releaseSpecial(old);
+    const gain = this.ctx.createGain();
+    gain.gain.value = 1;
+    gain.connect(this.specialGain);
+    const group = { id, gain, sources: new Set() };
+    this.specialGroups.push(group);
+    this.specialTriggerCount++;
+    const dt = 60 / PACKS[this.session.pack].bpm / 4;
+    for (const item of plan)
+      this.note(item.event, when + item.offset, dt, gain, group);
+    this.onUpdate();
+    return group;
+  }
+  async triggerSpecial(id) {
+    clearTimeout(this.specialIdleTimer);
+    clearTimeout(this.tailTimer);
+    await this.init();
+    if (this.paused && !this.pausedWithSpecials) {
+      this.frozenPosition = this.position();
+      this.pauseAnchor = {
+        time: this.ctx.currentTime,
+        nextTime: this.nextTime,
+        timeline: this.timeline.map((p) => ({ ...p })),
+      };
+      this.loopBus.gain.cancelScheduledValues(this.ctx.currentTime);
+      this.loopBus.gain.setValueAtTime(0, this.ctx.currentTime);
+      for (const source of this.loopSources) {
+        try {
+          source.stop();
+        } catch {
+          /* Ended. */
+        }
+      }
+      this.pausedWithSpecials = true;
+    }
+    await this.ctx.resume();
+    return this.scheduleSpecial(id, this.ctx.currentTime + 0.004);
   }
   async startRecording() {
     await this.init();
@@ -366,7 +488,9 @@ export class Engine {
     });
   }
   async dispose() {
+    this.disposed = true;
     clearTimeout(this.tailTimer);
+    clearTimeout(this.specialIdleTimer);
     clearInterval(this.timer);
     if (this.ctx) await this.ctx.close();
   }
@@ -383,6 +507,8 @@ export async function renderDiagnostic({
   pump = 0.7,
   reverb = 0,
   bars,
+  specials = [],
+  onlySpecials = false,
 } = {}) {
   const c = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000),
     s = initialSession();
@@ -404,12 +530,20 @@ export async function renderDiagnostic({
   e.createGraph(c);
   e.ceiling.connect(c.destination);
   const dt = 60 / PACKS[pack].bpm / 4;
-  for (
-    let step = 0;
-    0.05 + step * dt < seconds - 0.1 &&
-    (bars === undefined || step < bars * 16);
-    step++
-  )
-    e.scheduleStep(step, 0.05 + step * dt, dt);
+  if (!onlySpecials)
+    for (
+      let step = 0;
+      0.05 + step * dt < seconds - 0.1 &&
+      (bars === undefined || step < bars * 16);
+      step++
+    )
+      e.scheduleStep(step, 0.05 + step * dt, dt);
+  for (const shot of specials)
+    e.scheduleSpecial(
+      shot.id,
+      shot.time + 0.05,
+      shot.step ?? Math.floor(shot.time / dt),
+      false,
+    );
   return c.startRendering();
 }

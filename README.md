@@ -1,17 +1,31 @@
-# BoomStep · Hard House Live
+# BoomStep · Berlin Bounce + Live Specials
 
 **Spielen: https://altibo.github.io/BoomStep/** · Offlinefähige Musik-PWA, keine Anmeldung, keine Samples, kein KI-Backend.
 
-Vier laufende Spuren, **alle musikalischen Regler direkt auf einer Oberfläche**, ein XY-Feld zum Spielen statt verschachtelter Menüs. Kopfhörer empfohlen. Die Versionen bleiben über Git-Historie und separate Feature-/Deploybranches nachvollziehbar.
+Neues eigenes Standardpaket **Berlin Bounce** und **sechs einmalige Live-Specials**. Vier laufende Spuren, **alle musikalischen Regler direkt auf einer Oberfläche**, ein XY-Feld zum Spielen statt verschachtelter Menüs. Kopfhörer empfohlen. Die Versionen bleiben über Git-Historie und separate Feature-/Deploybranches nachvollziehbar.
+
+## Stilreferenz: textgestützt, keine Songkopie
+
+ANUUK wurde anhand seines [offiziellen Amplia-Artistprofils](https://www.ampliaberlin.com/artists/anuuk) als Berliner Liveact mit Rap-Energie und hartem, federndem Techno zugeordnet. [Spotify „Jump“](https://open.spotify.com/track/5IHOeYfMY3ZhuUPXDKH7sf) und [OTOTOY „Make It Clap“](https://ototoy.jp/_/default/p/4145720) bestätigen Anuuk/Kø:lab-Releasezuordnungen. **Es wurden nur öffentliche Text-/Metadaten geöffnet, keine Musik gehört oder transkribiert.** 152 BPM/F-Moll sind eigene Kompositionsentscheidungen, keine verifizierten Trackdaten. Keine fremden Songs, Melodien, Samples, Vocals oder Künstlerstimmen, keine offizielle ANUUK-App. Details: [Quellen und Ableitung](docs/style-research.md).
 
 ## Der neue Sound
+
+- **Berlin Bounce · 152 BPM / F-Moll, neuer Standard:** kürzere, federnde Kick mit eigener Hüllkurve, synkopierter FM-/Triangle-Bass mit Oktavantworten, Swing-Hats/Rims/Claps, formantgefilterte synthetische Bark-Stabs und eigene Call-and-Response-Motive. Neue Patternereignisse und Synthesestimmen, nicht bloß ein umbenanntes Hard-House-Paket.
 
 - **Donk District · 150 BPM / A-Moll:** FM-Donk auf Offbeats, rollende Percussion, kurze Rave-Stabs.
 - **Steel Warehouse · 147 BPM / Fis-Moll:** härter gesättigte Kick, metallischer Donk, Square-Riffs, Ride-/Warehouse-Variation.
 - **Hoover Riot · 154 BPM / E-Moll:** verstimmte Sägezahn-Hoover mit Pitch-Drop, rasante Riffs und Rush-Fills.
-- Pro Paket vier deutlich unterschiedliche Patterns je Spur: **Drums / Bass / Stabs / Riff**. Alle teilen die viertaktige Harmonie; zusätzliche Fill-Entscheidungen laufen über eine **achttaktige Phrase**. Die drei ursprünglichen Pakete bleiben als **Classic** verfügbar — insgesamt 96 Spur-Patterns.
+- Pro Paket vier deutlich unterschiedliche Patterns je Spur: **Drums / Bass / Stabs / Riff**. Alle teilen die viertaktige Harmonie; zusätzliche Fill-Entscheidungen laufen über eine **achttaktige Phrase**. Die drei ursprünglichen Pakete bleiben als **Classic** verfügbar — insgesamt 112 Spur-Patterns.
 - Die Kick hat getrennten tiefen Body, Pitch-Hüllkurve, Click und kontrollierte Waveshaper-Sättigung. Offbeat-Open-Hats, 16tel-Hats, Clap-Bursts, Snare-Layer, Percussion und Tom-Fills werden lokal synthetisiert. Donk verwendet eine abklingende FM-Modulation; Hoover nutzt mehrere detunete Oszillatoren. Keine simplen vier Metronome und keine fremden Samples.
 - Ein kickgesteuertes, audiozeitgeplantes **Ducking** schafft Platz für Kick und Bass. Der sichtbare PUMP-Regler steuert dessen Tiefe auf Bass/Stabs/Riff; eine stummgeschaltete oder lautlose Kick löst es nicht aus. Stereoabbildung, Kompressor und abschließende begrenzte Kennlinie sorgen für Headroom. Die Safety-Kennlinie bleibt auch bei überfahrenem Eingang unter Vollaussteuerung; sie ersetzt kein menschliches Mastering.
+
+## Sechs direkt sichtbare Einmal-Pads
+
+**BARK HIT / BASS SHOT / ROLL FILL / UP SWEEP / IMPACT / LASER**: Ein Tap startet genau ein finites Klangereignis. Kein Toggle, kein dauerhaftes Loop und keine Spurpattern-Ersetzung. Bark/Bass sind tonal an aktuelle Tonart/Akkordphase gebunden; der Roll Fill startet sofort frei im Pakettempo, ohne versteckte Queue. Rise/Impact/Laser enden von selbst. Ein heller Padzustand zeigt den Trigger bzw. laufenden Sound.
+
+**SPECIAL LEVEL** regelt alle sechs Pads direkt. Die Specials gehen durch denselben Masterfilter, Drive, Flanger, Echo, Hall, Gate, Kompressor und Safety-Ausgang wie der Jam und sind wirklich in der WAV-Aufnahme enthalten. Spur-Mute/Solo betrifft den Loop, nicht den separaten Special-Bus; PUMP duckt weiterhin die Loopspuren zur Kick.
+
+Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, startet aber **nicht heimlich den Loop**. Bei pausiertem Jam bleibt der Loopbus stumm; vorhandene Lookahead-Ereignisse werden beim Fortsetzen um die vergangene Audiozeit verschoben, ohne Clock-/Patternphase voranzusetzen. Eine endliche One-Shot-Hüllkurve bleibt nicht an Pointer-Hold gebunden. Mehrere Pads/Finger und wiederholte Taps sind erlaubt. Bis zu **acht Soundgruppen** überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung, statt neue Taps still zu ignorieren. Alle Quellen und Gruppen werden nach Ende freigegeben. **■** stoppt Loop und Specials; **DRY!** bleibt ein reiner Effektreset.
 
 ## Eine Oberfläche, keine musikalischen Untermenüs
 
@@ -36,12 +50,12 @@ Automatisierte Chromium-Prüfung in CSS-Pixeln:
 
 | Viewport       | Musikbereich einschließlich Transport | Verhalten                                          |
 | -------------- | ------------------------------------: | -------------------------------------------------- |
-| 390 × 844      |                      unten bei 688 px | alles direkt im Viewport                           |
-| 390 × 700      |                      unten bei 594 px | alles direkt im Viewport                           |
-| 320 × 568      |                  unten bei ca. 786 px | vertikales Scrollen, keine versteckten Musikregler |
-| 844 × 390 quer |                  unten bei ca. 492 px | vertikales Scrollen                                |
+| 390 × 844      |                      unten bei 830 px | alles direkt im Viewport                           |
+| 390 × 700      |                      unten bei 736 px | ca. 36 px vertikales Scrollen                      |
+| 320 × 568      |                  unten bei ca. 928 px | vertikales Scrollen, keine versteckten Musikregler |
+| 844 × 390 quer |                  unten bei ca. 586 px | vertikales Scrollen                                |
 
-Pattern-, STUMM-/SOLO-, FX- und Transporttasten sowie Paketauswahl haben **mindestens 44×44 CSS-Pixel**. Die zwölf direkten Spur-Fader verwenden kompakte 36–40 px hohe Touchbereiche und klar beschriftete horizontale Regler; sie werden nicht als 44-px-Tasten ausgegeben. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
+Pattern-, STUMM-/SOLO-, FX-, Special- und Transporttasten sowie Paketauswahl haben **mindestens 44×44 CSS-Pixel**. Die zwölf direkten Spur-Fader verwenden kompakte 36–40 px hohe Touchbereiche und klar beschriftete horizontale Regler; sie werden nicht als 44-px-Tasten ausgegeben. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
 
 ## Aufnahme und Sessions
 
@@ -49,7 +63,7 @@ Pattern-, STUMM-/SOLO-, FX- und Transporttasten sowie Paketauswahl haben **minde
 - Nochmals REC/WAV tippen, dann den **Stereo-WAV-Link** herunterladen. 16-bit PCM in der AudioContext-Samplerate, maximal **120 Audiosekunden**. Bei 48 kHz etwa 23 MB WAV / 46 MB Float-Aufnahmepuffer. Pausen frieren Audiozeit und Aufnahme ein. Kein Mikrofonzugriff.
 - AudioWorklet braucht HTTPS oder localhost. Fehlt er, funktioniert Musik weiter und Aufnahme zeigt eine Fehlermeldung.
 - SAVE/Öffnen: ein lokaler Slot auf diesem Gerät; Export/Import: validierte JSON-Session. Browserdaten können vom Betriebssystem gelöscht werden. WAV-Datei zum Behalten herunterladen.
-- **Sessionformat v2**, mit validierter Migration aller drei **v1**-Pakete auf ihre Classic-Entsprechung. Patternwahl, Mute/Solo, Lautstärke, Filter, Sends und Masterwerte bleiben erhalten; neue Drive/Pump/XY-Effekte starten bei der Migration neutral. Gehaltene XY-Positionen lassen sich speichern; nicht gehaltene Gesten werden neutral gespeichert.
+- **Sessionformat v3**, mit validierter Migration aller drei **v1**-Pakete auf ihre Classic-Entsprechung und aller sechs **v2**-Paketindizes ohne Verschiebung. SPECIAL LEVEL wird neutral mit 0,7 ergänzt. Patternwahl, Mute/Solo, Lautstärke, Filter, Sends und Masterwerte bleiben erhalten; Drive/Pump/XY-Effekte starten nur bei der V1-Migration neutral, bestehende V2-Effekte bleiben erhalten. Gehaltene XY-Positionen lassen sich speichern; nicht gehaltene Gesten werden neutral gespeichert.
 
 ## Handy / offline / Grenzen
 
@@ -66,17 +80,17 @@ Node **22.12+** oder **24 LTS**, npm:
 ```sh
 npm ci
 npm run dev                   # Entwicklung, Port 5173
-npm test                      # 18 Node-Tests
+npm test                      # 22 Node-Tests
 npm run lint
 npm run build                 # statische PWA in dist/
 npm run preview               # Produktionsvorschau, Port 4173
 npx playwright install chromium
-npm run test:browser           # 11 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
+npm run test:browser           # 20 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
 npm audit --omit=dev
 ```
 
-`src/music.js`: Hard-House-Komposition, Sessionmigration, PatternClock. `src/legacy-music.js`: ursprüngliche Classic-Komposition. `src/synth.js`: deterministische Stimmen. `src/fx.js`: reine XY-/Release-/Gate-/Kurvenentscheidungen. `src/engine.js`: gemeinsamer AudioContext, 20-ms-Wecktimer, samplezeitgeplanter 100-ms-Lookahead, Ducking und Effektgraph. `src/main.js` / `src/style.css`: direktes Mischpult. `public/recorder.js` / `src/wav.js`: echter PCM-Capture/WAV. `public/sw.js` / `vite.config.js`: pro Build und App-Scope versionierter Offlinecache.
+`src/music.js`: Paketindizes, Sessionmigration, PatternClock. `src/bounce-music.js`: neue Bounce-Komposition. `src/specials.js`: finite, tonartbezogene Special-Pläne. `src/legacy-music.js`: ursprüngliche Classic-Komposition. `src/synth.js`: deterministische Stimmen. `src/fx.js`: reine XY-/Release-/Gate-/Kurvenentscheidungen. `src/engine.js`: gemeinsamer AudioContext, 20-ms-Wecktimer, samplezeitgeplanter 100-ms-Lookahead, Ducking und Effektgraph. `src/main.js` / `src/style.css`: direktes Mischpult. `public/recorder.js` / `src/wav.js`: echter PCM-Capture/WAV. `public/sw.js` / `vite.config.js`: pro Build und App-Scope versionierter Offlinecache.
 
-Node-Tests erhalten die früheren Clock-/WAV-/Capture-Regressionen und prüfen zusätzlich Migration, FX-Ziele, Release/Hold/DRY, Gatephase, Viertaktphase/Achttaktfills und unterschiedliche Patterns. Browser-Tests erhalten die früheren Audio-/Session-/Offline-Prüfungen und ergänzen Layouts, XY-Gesten, echte live aufgenommene Drive-Änderung, 48 Offline-Renders mit Signalunterschieden zwischen allen Hard-House-Varianten, begrenzte Peaks und hörbare Signaländerungen durch alle Effektwege. Native DSP-Ausgaben dürfen kleine numerische Abweichungen haben; Kompositionsereignisse bleiben deterministisch.
+Node-Tests prüfen zusätzlich die sechs distinkten finiten Pläne, F-Moll und indexerhaltende V2-Migration. Browser-Tests ergänzen Standalone-Taps ohne Loopstart, Retrigger/Keyboard/achtfaches Voice-Stealing und Cleanup, unveränderte Clock/Patterns, Pause mit Specials, echte Special-PCM-Aufnahme bei stummen Loopspuren, Offline-Pads und neue Layoutgrößen. Die bisherige Suite bleibt erhalten. Node-Tests erhalten die früheren Clock-/WAV-/Capture-Regressionen und prüfen zusätzlich Migration, FX-Ziele, Release/Hold/DRY, Gatephase, Viertaktphase/Achttaktfills und unterschiedliche Patterns. Browser-Tests erhalten die früheren Audio-/Session-/Offline-Prüfungen und ergänzen Layouts, XY-Gesten, echte live aufgenommene Drive-Änderung, 48 Offline-Renders mit Signalunterschieden zwischen allen Hard-House-Varianten, begrenzte Peaks und hörbare Signaländerungen durch alle Effektwege. Native DSP-Ausgaben dürfen kleine numerische Abweichungen haben; Kompositionsereignisse bleiben deterministisch.
 
-`test-results/artifacts/` enthält Screenshots, einen Signalbericht, echte Live-WAVs und drei 14-sekündige synthetisierte Demo-WAVs. Das sind lokale Testartefakte, keine automatisch publizierte Audio-Bibliothek. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
+`test-results/artifacts/` enthält Screenshots, einen Signalbericht, echte Live-WAVs, drei 14-sekündige synthetisierte Demo-WAVs, eine 35-sekündige eigene Berlin-Bounce-Performance mit Specials und eine tatsächliche Special-/FX-Liveaufnahme. Das sind lokale Testartefakte, keine automatisch publizierte Audio-Bibliothek. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).

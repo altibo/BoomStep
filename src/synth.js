@@ -24,24 +24,37 @@ export function createVoice(
   const e = event,
     kind = e.kind,
     duration =
-      kind === "kick"
-        ? 0.365
-        : kind === "clap"
-          ? 0.145
-          : kind === "snare"
-            ? 0.13
-            : kind === "openhat"
-              ? 0.16
-              : kind === "hat"
-                ? 0.04
-                : kind === "ride"
-                  ? 0.21
-                  : (e.length || 1) * dt;
+      e.seconds ??
+      (kind === "bouncekick"
+        ? 0.285
+        : kind === "kick"
+          ? 0.365
+          : kind === "clap"
+            ? 0.145
+            : kind === "snare"
+              ? 0.13
+              : kind === "openhat"
+                ? 0.16
+                : kind === "hat"
+                  ? 0.04
+                  : kind === "ride"
+                    ? 0.21
+                    : (e.length || 1) * dt);
   const amp = c.createGain();
   amp.connect(destination);
   amp.gain.setValueAtTime(0, time);
   const peak = e.velocity;
-  if (kind === "kick") {
+  if (kind === "rise") {
+    amp.gain.setValueAtTime(0.0001, time);
+    amp.gain.linearRampToValueAtTime(peak, time + duration * 0.78);
+    amp.gain.linearRampToValueAtTime(0, time + duration);
+  } else if (kind === "bouncekick") {
+    amp.gain.linearRampToValueAtTime(peak, time + 0.002);
+    amp.gain.exponentialRampToValueAtTime(peak * 0.72, time + 0.04);
+    amp.gain.exponentialRampToValueAtTime(peak * 0.3, time + 0.11);
+    amp.gain.exponentialRampToValueAtTime(peak * 0.025, time + 0.24);
+    amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+  } else if (kind === "kick") {
     amp.gain.linearRampToValueAtTime(peak, time + 0.002);
     amp.gain.exponentialRampToValueAtTime(peak * 0.78, time + 0.03);
     amp.gain.exponentialRampToValueAtTime(peak * 0.45, time + 0.14);
@@ -60,9 +73,18 @@ export function createVoice(
       time + (kind === "hoover" ? 0.012 : 0.002),
     );
     if (
-      ["donk", "hooverbass", "hoover", "rave", "stab", "acid", "perc"].includes(
-        kind,
-      )
+      [
+        "bouncebass",
+        "bouncestab",
+        "bark",
+        "donk",
+        "hooverbass",
+        "hoover",
+        "rave",
+        "stab",
+        "acid",
+        "perc",
+      ].includes(kind)
     )
       amp.gain.setValueAtTime(peak, time + duration * 0.22);
     amp.gain.exponentialRampToValueAtTime(0.0001, time + duration);
@@ -103,9 +125,12 @@ export function createVoice(
     s._offset = offset;
     return s;
   }
-  if (kind === "kick") {
+  if (kind === "kick" || kind === "bouncekick") {
     const shaper = c.createWaveShaper();
-    shaper.curve = driveCurve(pack.character === "steel" ? 3.8 : 2.5, 1025);
+    shaper.curve = driveCurve(
+      kind === "bouncekick" ? 1.85 : pack.character === "steel" ? 3.8 : 2.5,
+      1025,
+    );
     shaper.oversample = "2x";
     shaper.connect(amp);
     nodes.push(shaper);
@@ -125,6 +150,62 @@ export function createVoice(
     click.gain.setValueAtTime(0.13, time);
     click.gain.exponentialRampToValueAtTime(0.0001, time + 0.012);
     noiseSource(click);
+  } else if (kind === "bouncebass") {
+    const f = filter("lowpass", 1850, 1.8, amp);
+    f.frequency.exponentialRampToValueAtTime(370, time + duration * 0.85);
+    const carrier = osc("triangle", hz(e.note), f),
+      fm = c.createGain();
+    nodes.push(fm);
+    fm.connect(carrier.frequency);
+    fm.gain.setValueAtTime(hz(e.note) * 2.4 * (e.accent || 1), time);
+    fm.gain.exponentialRampToValueAtTime(
+      0.5,
+      time + Math.min(duration * 0.8, 0.13),
+    );
+    osc("sine", hz(e.note) * 1.5, fm);
+    osc("sawtooth", hz(e.note), gain(0.12, f));
+  } else if (kind === "bark") {
+    const input = c.createGain();
+    nodes.push(input);
+    const f1 = filter("bandpass", 720, 3, gain(0.85, amp)),
+      f2 = filter("bandpass", 1650, 3.8, gain(0.6, amp));
+    input.connect(f1);
+    input.connect(f2);
+    f1.frequency.exponentialRampToValueAtTime(430, time + duration);
+    f2.frequency.exponentialRampToValueAtTime(2300, time + duration * 0.28);
+    f2.frequency.exponentialRampToValueAtTime(950, time + duration);
+    osc("square", hz(e.note), gain(0.7, input));
+    osc("triangle", hz(e.note) * 2, gain(0.25, input));
+  } else if (kind === "bouncestab") {
+    const f = filter("lowpass", 4200, 1.6, amp);
+    f.frequency.exponentialRampToValueAtTime(650, time + duration);
+    for (const d of [-6, 6]) {
+      const o = osc("sawtooth", hz(e.note), gain(0.5, f));
+      o.detune.value = d;
+    }
+  } else if (kind === "rim") {
+    osc("sine", hz(e.note) * 1.8, amp);
+    osc("sine", 380, gain(0.5, amp));
+  } else if (kind === "rise") {
+    const f = filter("bandpass", 180, 1.2, amp);
+    f.frequency.exponentialRampToValueAtTime(11000, time + duration);
+    const n = noiseSource(f);
+    n.loop = true;
+    osc("triangle", hz(e.note), gain(0.06, f));
+  } else if (kind === "impact") {
+    const f = filter("lowpass", 2600, 0.9, gain(0.38, amp));
+    f.frequency.exponentialRampToValueAtTime(100, time + duration * 0.9);
+    noiseSource(f);
+    const o = osc("sine", hz(e.note) * 2, amp);
+    o.frequency.exponentialRampToValueAtTime(hz(e.note), time + 0.17);
+  } else if (kind === "laser") {
+    const f = filter("lowpass", 4500, 1.1, amp),
+      o = osc("sine", hz(e.note) * 12, f);
+    o.frequency.exponentialRampToValueAtTime(
+      hz(e.note) * 0.5,
+      time + duration * 0.85,
+    );
+    osc("triangle", hz(e.note) * 2, gain(0.08, f));
   } else if (["hat", "openhat", "ride", "clap", "snare"].includes(kind)) {
     const f = filter(
       kind === "clap" || kind === "snare" ? "bandpass" : "highpass",

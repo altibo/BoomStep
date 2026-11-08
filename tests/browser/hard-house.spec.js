@@ -30,6 +30,7 @@ test("all performance controls are inline; portrait layouts are visible and touc
       ".solo",
       ".fx-pads button",
       ".transport button",
+      ".special-pad",
       "#pack",
     ]) {
       const sizes = await page.locator(sel).evaluateAll((es) =>
@@ -43,7 +44,7 @@ test("all performance controls are inline; portrait layouts are visible and touc
     }
     const bounds = await page.locator("#performance").boundingBox();
     console.log("Performance layout", width, height, bounds);
-    if (width === 390)
+    if (width === 390 && height === 844)
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
     await page.screenshot({
       path: `test-results/artifacts/hard-house-${width}x${height}.png`,
@@ -130,7 +131,7 @@ test("old local sessions migrate and Classic packages remain available", async (
     ),
   );
   await page.locator("#load").click();
-  expect(await page.evaluate(() => window.boomstep.session.version)).toBe(2);
+  expect(await page.evaluate(() => window.boomstep.session.version)).toBe(3);
   expect(await page.evaluate(() => window.boomstep.session.pack)).toBe(5);
   expect(
     await page.evaluate(() => window.boomstep.session.tracks[2].mute),

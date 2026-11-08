@@ -25,7 +25,7 @@ test("v1 sessions migrate every Classic pack without losing original settings", 
     old.tracks[2].variant = 3;
     old.tracks[3].solo = true;
     const s = validateSession(old);
-    assert.equal(s.version, 2);
+    assert.equal(s.version, 3);
     assert.equal(s.pack, pack + 3);
     assert.deepEqual(s.tracks, old.tracks);
     assert.equal(s.drive, 0);

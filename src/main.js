@@ -1,3 +1,5 @@
+import { SPECIALS } from "./specials.js";
+import { encodeWav } from "./wav.js";
 import "./style.css";
 import {
   TRACKS,
@@ -9,6 +11,7 @@ import {
 } from "./music.js";
 import { Engine, renderDiagnostic } from "./engine.js";
 import { xyPoint, releaseFX, panicSession } from "./fx.js";
+const padFlashes = new Map();
 const app = document.querySelector("#app"),
   $ = (s) => document.querySelector(s);
 let session = initialSession(),
@@ -20,16 +23,17 @@ const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
 <section id="performance" aria-label="Hard House Performance">
-<header><h1>BoomStep<span>HARD HOUSE / LIVE</span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span id="pack-meta"></span></div></header>
+<header><h1>BoomStep<span>BERLIN BOUNCE / LIVE</span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span id="pack-meta"></span></div></header>
 <div class="phasebar"><span id="transport-state">BEREIT</span><div class="phase" aria-label="8-Takt-Phrase, gemeinsame vier Akkorde">${Array.from({ length: 8 }, (_, i) => `<i data-bar="${i}"></i>`).join("")}</div><span id="beat">150 BPM</span></div>
 <section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span id="name-${i}"></span><span class="pending" id="pending-${i}" aria-live="polite"></span></div>${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}">${v + 1}</button>`).join("")}<button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><div class="track-bottom">${slider("VOL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
 <section class="master" aria-label="Direkte Mastereffekte">${slider("MASTER FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
 <section class="fx-section" aria-label="XY Performanceeffekte"><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="xy-axis">DUNKEL ← FARBE → HELL</div><strong id="xy-label">ECHO</strong><span id="xy-hint">Ziehen · loslassen = trocken</span><i id="xy-dot"></i><span class="xy-depth">↑ TIEFE</span></div><div class="fx-pads" role="group" aria-label="Effektmodus"><button data-fx="echo">ECHO<span>3/16 · Feedback</span></button><button data-fx="flanger">FLANGE<span>Moduliert</span></button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippe für 1/16</span></button><button data-fx="drive">DRIVE<span>Sättigung</span></button></div></section>
+<section class="specials" aria-label="Einmalige Live-Specials"><div class="specials-head"><h2>LIVE SPECIALS <small>1 TAP · 1 HIT</small></h2>${slider("SPECIAL LEVEL", "specialLevel", session.specialLevel)}</div><div class="special-pads">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}<span>${p.hint}</span></button>`).join("")}</div></section>
 <div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic" title="Alle Effekte neutral, Musik bleibt">DRY!</button></div>
 </section>
-<div id="notice" role="status">150 BPM. Offbeat-Bass. Zieh den Sound auf.</div><a id="download" hidden>WAV herunterladen</a>
+<div id="notice" role="status">Berlin Bounce · Originale Patterns. Ein Tap spielt ein Special.</div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Dein Rave, eine Oberfläche.</h2><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Echo-Send. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. DRY! setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = DRY!.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE/Öffnen sichert einen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Lokale Synthese · keine Samples · Vordergrund-Audio</footer></main>`;
+<div id="help-text" hidden><h2>Dein Rave, eine Oberfläche.</h2><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. SPECIAL LEVEL regelt alle Pads. ■ beendet auch Specials; DRY! setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Echo-Send. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. DRY! setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = DRY!.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE/Öffnen sichert einen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Lokale Synthese · keine Samples · Vordergrund-Audio</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -92,6 +96,12 @@ function refresh() {
         String(el.dataset.fx === session.fx.mode),
       ),
     );
+  document.querySelectorAll("[data-special]").forEach((el) => {
+    const active =
+      (padFlashes.get(el.dataset.special) || 0) > performance.now() ||
+      engine.specialGroups.some((g) => g.id === el.dataset.special);
+    el.classList.toggle("firing", active);
+  });
   $("#hold").setAttribute("aria-pressed", String(session.fx.hold));
   $("#xy").classList.toggle("held", session.fx.hold);
   $("#xy-label").textContent =
@@ -155,6 +165,7 @@ $("#stop").onclick = () =>
 app.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
+  if (b.dataset.special && e.detail === 0) triggerPad(b.dataset.special);
   if (b.dataset.track !== undefined)
     engine.queue(Number(b.dataset.track), Number(b.dataset.variant));
   for (const key of ["mute", "solo"])
@@ -169,6 +180,23 @@ app.addEventListener("click", (e) => {
     session.fx.mode = b.dataset.fx;
     updateFX();
   }
+});
+function triggerPad(id) {
+  padFlashes.set(id, performance.now() + 180);
+  refresh();
+  void engine
+    .triggerSpecial(id)
+    .then(() => refresh())
+    .catch((e) => {
+      notice(e.message);
+      console.error(e);
+    });
+}
+app.addEventListener("pointerdown", (e) => {
+  const b = e.target.closest("[data-special]");
+  if (!b) return;
+  e.preventDefault();
+  triggerPad(b.dataset.special);
 });
 app.addEventListener("input", (e) => {
   const { key, strip } = e.target.dataset;
@@ -336,7 +364,7 @@ $("#pack").onchange = (e) =>
       next.tracks[2].variant = 1;
       next.tracks[3].variant = 3;
     }
-    if (next.pack >= 3) {
+    if (next.pack >= 3 && next.pack <= 5) {
       next.drive = 0;
       next.pump = 0;
     }
@@ -381,6 +409,13 @@ window.boomstep = {
     return session;
   },
   renderDiagnostic,
+  async renderDiagnosticWav(config) {
+    const buffer = await renderDiagnostic(config);
+    return encodeWav(
+      [[buffer.getChannelData(0), buffer.getChannelData(1)]],
+      buffer.sampleRate,
+    );
+  },
 };
 refresh();
 setInterval(refresh, 80);
