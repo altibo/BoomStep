@@ -1,5 +1,5 @@
 {
-  "name": "BoomStep · Hard House Live",
+  "name": "BoomStep · Bounce + Specials",
   "short_name": "BoomStep",
   "lang": "de",
   "start_url": "./",
@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#06101d",
   "theme_color": "#061322",
-  "description": "Hard House, vier Spuren und direkte XY-Effekte. Dein Offline-Rave.",
+  "description": "Berlin Bounce, vier Spuren, sechs einmalige Specials und direkte XY-Effekte. Eigene Offline-Synthese.",
   "icons": [
     {
       "src": "icon-192.png",
