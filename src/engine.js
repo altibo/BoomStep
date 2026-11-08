@@ -1,3 +1,4 @@
+import { intensityTargets, intensityEvents } from "./intensity.js";
 import { specialPlan, oldestSpecial } from "./specials.js";
 import {
   PatternClock,
@@ -292,7 +293,13 @@ export class Engine {
     variants = this.session.tracks.map((t) => t.variant),
   ) {
     const all = Array.from({ length: 4 }, (_, i) =>
-      eventsAt(this.session.pack, i, variants[i], step),
+      intensityEvents(
+        eventsAt(this.session.pack, i, variants[i], step),
+        i,
+        step,
+        this.session.intensity,
+        PACKS[this.session.pack],
+      ),
     );
     if (
       all[0].some((e) => e.kind === "kick" || e.kind === "bouncekick") &&
@@ -308,7 +315,7 @@ export class Engine {
   duckAt(time) {
     for (let i = 1; i < 4; i++) {
       const gain = this.strips[i].duck.gain,
-        depth = this.session.pump * [0, 1, 0.72, 0.55][i];
+        depth = intensityTargets(this.session).pump * [0, 1, 0.72, 0.55][i];
       gain.cancelScheduledValues(time);
       gain.setValueAtTime(1, time);
       gain.linearRampToValueAtTime(1 - depth * 0.92, time + 0.003);
@@ -340,12 +347,14 @@ export class Engine {
     this.clock.queue(i, v, this.running || this.paused);
     this.onUpdate();
   }
-  applyMix() {
+  applyMix(at) {
     if (!this.ctx) return;
-    const now = this.ctx.currentTime,
+    const now = at ?? this.ctx.currentTime,
+      macro = intensityTargets(this.session),
       target = fxTargets(this.session),
       ramp = (param, value, tau = 0.025) =>
         param.setTargetAtTime(value, now, tau);
+    ramp(this.driveOut.gain, macro.headroom);
     ramp(this.master.frequency, target.low);
     ramp(this.highpass.frequency, target.high);
     ramp(this.driveDry.gain, 1 - target.drive * 0.38);
@@ -374,7 +383,7 @@ export class Engine {
   note(e, time, dt, dest, group) {
     return createVoice(
       this.ctx,
-      e,
+      { ...e, energy: e.energy ?? this.session.intensity ?? 0 },
       time,
       dt,
       dest,
@@ -509,10 +518,13 @@ export async function renderDiagnostic({
   bars,
   specials = [],
   onlySpecials = false,
+  intensity = 0,
+  intensitySweep = [],
 } = {}) {
   const c = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000),
     s = initialSession();
   s.pack = pack;
+  s.intensity = intensity;
   s.reverb = reverb;
   s.drive = 0.08;
   s.pump = pump;
@@ -536,14 +548,27 @@ export async function renderDiagnostic({
       0.05 + step * dt < seconds - 0.1 &&
       (bars === undefined || step < bars * 16);
       step++
-    )
-      e.scheduleStep(step, 0.05 + step * dt, dt);
-  for (const shot of specials)
+    ) {
+      const when = 0.05 + step * dt;
+      const next =
+        intensitySweep.filter((p) => p.time <= when - 0.05 + 1e-8).at(-1)
+          ?.value ?? intensity;
+      if (next !== s.intensity) {
+        s.intensity = next;
+        e.applyMix(when);
+      }
+      e.scheduleStep(step, when, dt);
+    }
+  for (const shot of specials) {
+    s.intensity =
+      intensitySweep.filter((p) => p.time <= shot.time).at(-1)?.value ??
+      intensity;
     e.scheduleSpecial(
       shot.id,
       shot.time + 0.05,
       shot.step ?? Math.floor(shot.time / dt),
       false,
     );
+  }
   return c.startRendering();
 }

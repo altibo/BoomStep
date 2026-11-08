@@ -1,5 +1,5 @@
 {
-  "name": "BoomStep · Orbit Deck",
+  "name": "BoomStep · Krassheit",
   "short_name": "BoomStep",
   "lang": "de",
   "start_url": "./",
@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#06101d",
   "theme_color": "#061322",
-  "description": "Patternbänder ziehen, Specials streichen, gemeinsame Audiozeit im Orbit sehen. Vier Spuren und eigene Offline-Synthese.",
+  "description": "Krassheit live spielen: dichterer Sound, Farbglow im Beat, Patternbänder und sechs Specials. Eigene Offline-Synthese.",
   "icons": [
     {
       "src": "icon-192.png",

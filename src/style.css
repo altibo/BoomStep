@@ -688,3 +688,94 @@ footer {
   color: var(--muted);
   margin-left: 8px;
 }
+
+/* Krassheit occupies the former branding slot, not another musical row. */
+header {
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr) 44px;
+  gap: 4px;
+}
+.pack-select {
+  width: auto;
+  max-width: none;
+}
+.intensity-control {
+  position: relative;
+  min-width: 0;
+  height: 44px;
+  border-radius: 10px;
+  background: rgba(var(--accent-rgb, 57, 215, 237), 0.08);
+  box-shadow:
+    inset 0 0 0 1px var(--cyan),
+    0 0 14px rgba(var(--accent-rgb, 57, 215, 237), var(--light-glow, 0.1));
+}
+.intensity-control > span {
+  position: absolute;
+  top: 0;
+  left: 4px;
+  right: 4px;
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 16px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.intensity-control output {
+  font-size: 11px;
+  font-weight: 500;
+}
+#intensity {
+  width: 100%;
+  height: 44px;
+  min-width: 44px;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--cyan);
+  background: transparent;
+  cursor: pointer;
+}
+#light-mode {
+  width: 44px;
+  height: 44px;
+  font-size: 11px;
+  line-height: 13px;
+  padding: 1px;
+}
+#orbit {
+  filter: drop-shadow(
+    0 0 5px rgba(var(--accent-rgb, 57, 215, 237), var(--light-glow, 0.1))
+  );
+}
+.pattern.active:not(.queued),
+#xy.held {
+  box-shadow: 0 0 10px
+    rgba(var(--accent-rgb, 57, 215, 237), var(--light-glow, 0.1));
+}
+.special-pad.firing {
+  background: rgba(var(--accent-rgb, 57, 215, 237), 0.22);
+  border-color: var(--cyan);
+  color: #eff5fa;
+  box-shadow: 0 0 12px
+    rgba(var(--accent-rgb, 57, 215, 237), var(--light-glow, 0.1));
+}
+.lights-quiet .special-pad.firing {
+  background: #17364a;
+  border-color: #4c7188;
+  color: #eff5fa;
+  box-shadow: none;
+}
+@media (max-width: 359px) {
+  header {
+    grid-template-columns: 110px minmax(0, 1fr) 44px;
+  }
+}
+.solo[aria-pressed="true"],
+.fx-pads button[aria-pressed="true"],
+#hold[aria-pressed="true"] {
+  background: rgba(var(--accent-rgb, 57, 215, 237), 0.2);
+  border-color: var(--cyan);
+  color: #eff5fa;
+}

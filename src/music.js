@@ -55,6 +55,8 @@ export function initialSession(pack = 6) {
     version: 3,
     pack,
     specialLevel: 0.7,
+    intensity: 0,
+    beatLights: true,
     master: 1,
     reverb: 0.08,
     drive: 0.16,
@@ -93,6 +95,11 @@ export function validateSession(value) {
       throw new Error("Ungültiges V2-Paket");
     s = { ...s, version: 3, specialLevel: 0.7 };
   }
+  // Backward-compatible V3 extension: old V1–3 sessions retain their exact mix.
+  if (!Object.hasOwn(s, "intensity")) s.intensity = 0;
+  if (!Object.hasOwn(s, "beatLights")) s.beatLights = true;
+  if (!unit(s.intensity) || typeof s.beatLights !== "boolean")
+    throw new Error("Ungültige Krassheit/Lichtwahl");
   if (
     !Number.isInteger(s.pack) ||
     !PACKS[s.pack] ||

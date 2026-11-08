@@ -1,3 +1,4 @@
+import { intensityName, lightState } from "./intensity.js";
 import {
   ribbonVariant,
   ribbonCancelled,
@@ -31,11 +32,17 @@ let session = initialSession(),
   busy = false,
   downloadUrl,
   activePointer = null;
+try {
+  const saved = localStorage.getItem("boomstep-light-mode");
+  if (saved !== null) session.beatLights = saved === "beat";
+} catch {
+  /* Private storage can be unavailable. */
+}
 const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
 <section id="performance" aria-label="Orbit Deck Performance">
-<header><h1>BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span class="package-meta" id="pack-meta"></span></div></header>
+<header><h1 class="sr-only">BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span class="package-meta" id="pack-meta"></span></div><label class="intensity-control" for="intensity"><span>KRASSHEIT <output id="intensity-value">0 Locker</output></span><input id="intensity" type="range" min="0" max="100" step="1" value="0" aria-label="Krassheit" aria-valuetext="0 Prozent, Locker"></label><button id="light-mode" aria-pressed="true" aria-label="Beat-Licht umschalten">LICHT<br><span>BEAT</span></button></header>
 <section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span class="track-short-name" id="name-${i}"></span></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: ziehen wählt, loslassen merkt vor; mehr als 24 Pixel nach oben oder unten herausziehen verwirft; Escape bricht ab">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom">${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
 <div class="mix-strip" aria-label="Master und Special-Pegel"><section class="master" aria-label="Direkte Mastereffekte">${slider("M-FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section><div class="special-level">${slider("HITPEGEL", "specialLevel", session.specialLevel)}</div></div>
 <section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><div class="orbit-deck"><strong id="xy-label" class="sr-only">MASTER-ECHO</strong><div class="xy-axis">Farbe: dunkel ↔ hell</div><div class="orbit-visual"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
@@ -56,7 +63,7 @@ app.innerHTML = `<main>
 </section>
 <div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p class="reset-help">FX AUS: Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen markiert nur eine Auswahl, ohne sie abzuspielen; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Band ziehen zeigt Abbrechen; dort loslassen verwirft nur die Auswahl. Zurück ins Band ziehen erlaubt wieder Vormerken. Escape, Systemabbruch oder Fingerverlust verwerfen ebenfalls. Keine Hörvorschau. Auf Band, XY und Specials ist Scrollen zugunsten der Musikgeste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = aktives Pattern/gewählter FX-Modus; ausschließlich Amber = vorgemerkter Patternwechsel; weiß = unverbindliche Ziehauswahl. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. HITPEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Die gemeinsame Reglerzeile enthält M-FILTER, Hall, Drive, Pump und HITPEGEL. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · eigene Synthese</footer></main>`;
+<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>KRASSHEIT:</b> 0 = dein unveränderter Grundmix. Mehr Krassheit ergänzt Sättigung, Kickkante, Klanghelligkeit und Pump; ab 25/50 zusätzliche Hats/Percussion, ab 55 Riff-Antworten, ab 75 kurze Grid-Ratchets im achten Takt. Keine Tempo-, Tonart- oder Patternwechsel. Deine Fader bleiben Baselines, nicht überschrieben. Klangregler gleiten in 25ms; neue Noten folgen dem Grid nach maximal 100ms Planungsvorlauf. FX AUS setzt auch Krassheit auf 0, Lautstärken/Patterns bleiben. LICHT schaltet Beat/Ruhig; System-Reduced-Motion erzwingt ruhig. Nur lokaler, weicher Audiozeit-Glow, maximal 3 Pulse/s, keine Vollbildblitze. Bei Pause keine Beatpulse. Lichtwahl wird lokal und mit der Session gespeichert.</p><p class="reset-help">FX AUS: Krassheit 0, Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen markiert nur eine Auswahl, ohne sie abzuspielen; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Band ziehen zeigt Abbrechen; dort loslassen verwirft nur die Auswahl. Zurück ins Band ziehen erlaubt wieder Vormerken. Escape, Systemabbruch oder Fingerverlust verwerfen ebenfalls. Keine Hörvorschau. Auf Band, XY und Specials ist Scrollen zugunsten der Musikgeste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = aktives Pattern/gewählter FX-Modus; ausschließlich Amber = vorgemerkter Patternwechsel; weiß = unverbindliche Ziehauswahl. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. HITPEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Die gemeinsame Reglerzeile enthält M-FILTER, Hall, Drive, Pump und HITPEGEL. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · eigene Synthese</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -77,6 +84,46 @@ function refresh() {
       p.bpm,
       engine.running,
     );
+  const lighting = lightState(
+    session.intensity,
+    orbit.progress,
+    p.bpm,
+    engine.running,
+    session.beatLights,
+    reducedMotion.matches,
+  );
+  const root = document.documentElement;
+  for (const [key, val] of Object.entries({
+    "--cyan": lighting.accent,
+    "--accent-rgb": lighting.rgb,
+    "--light-glow": String(lighting.glow),
+  }))
+    if (root.style.getPropertyValue(key) !== val)
+      root.style.setProperty(key, val);
+  $("#performance").classList.toggle(
+    "lights-quiet",
+    !session.beatLights || reducedMotion.matches,
+  );
+  $("#performance").dataset.lightHz = String(lighting.hz);
+  $("#performance").dataset.lightPulse = String(lighting.pulse);
+  $("#intensity").value = String(Math.round(session.intensity * 100));
+  $("#intensity-value").textContent =
+    `${Math.round(session.intensity * 100)} ${intensityName(session.intensity)}`;
+  $("#intensity").setAttribute(
+    "aria-valuetext",
+    `${Math.round(session.intensity * 100)} Prozent, ${intensityName(session.intensity)}`,
+  );
+  $("#light-mode").setAttribute("aria-pressed", String(session.beatLights));
+  $("#light-mode span").textContent =
+    !session.beatLights || reducedMotion.matches ? "RUHIG" : "BEAT";
+  $("#light-mode").setAttribute(
+    "aria-label",
+    reducedMotion.matches
+      ? "Licht ruhig durch Systemeinstellung; Beat-Lichtwunsch umschalten"
+      : session.beatLights
+        ? "Licht Beat; auf ruhig schalten"
+        : "Licht ruhig; auf Beat schalten",
+  );
   const head = orbitPoint(
     reducedMotion.matches ? orbit.bar / 8 : orbit.progress,
   );
@@ -276,8 +323,27 @@ function panic() {
   panicSession(session);
   syncSliders();
   updateFX();
-  notice("FX AUS: Filter und Klangregler neutral; Patterns und Pegel bleiben.");
+  notice(
+    "FX AUS: Krassheit 0 und Klangregler neutral; Patterns und Pegel bleiben.",
+  );
 }
+$("#intensity").oninput = (e) => {
+  session.intensity = Number(e.target.value) / 100;
+  updateFX();
+};
+$("#light-mode").onclick = () => {
+  session.beatLights = !session.beatLights;
+  try {
+    localStorage.setItem(
+      "boomstep-light-mode",
+      session.beatLights ? "beat" : "quiet",
+    );
+  } catch {
+    /* Session saving remains available. */
+  }
+  refresh();
+};
+reducedMotion.addEventListener("change", refresh);
 $("#play").onclick = () =>
   guarded(async () => {
     if (engine.running) await engine.pause();
@@ -573,6 +639,7 @@ $("#pack").onchange = (e) =>
       throw new Error("Erst REC beenden, dann Paket wechseln.");
     }
     const next = initialSession();
+    next.beatLights = session.beatLights;
     next.pack = Number(e.target.value);
     if (next.pack === 1) next.tracks[0].variant = 2;
     if (next.pack === 2) {
