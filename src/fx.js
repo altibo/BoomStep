@@ -1,3 +1,4 @@
+import { intensityTargets } from "./intensity.js";
 import { cutoff } from "./music.js";
 export const clamp = (n) => Math.max(0, Math.min(1, n));
 export function xyPoint(x, y, rect) {
@@ -19,7 +20,10 @@ export function fxTargets(session) {
     high: f.x > 0.5 ? 25 * (3500 / 25) ** ((f.x - 0.5) * 2) : 25,
     echo: f.mode === "echo" ? f.depth * 0.62 : 0,
     flanger: f.mode === "flanger" ? f.depth * 0.78 : 0,
-    drive: clamp(session.drive + (f.mode === "drive" ? f.depth * 0.85 : 0)),
+    drive: clamp(
+      intensityTargets(session).drive +
+        (f.mode === "drive" ? f.depth * 0.85 : 0),
+    ),
     gate: f.mode === "gate" ? f.depth : 0,
   };
 }
@@ -47,6 +51,7 @@ export function ceilingCurve() {
   return c;
 }
 export function panicSession(session) {
+  session.intensity = 0;
   session.master = 1;
   session.reverb = 0;
   session.drive = 0;

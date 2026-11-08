@@ -1,10 +1,21 @@
-# BoomStep · Orbit Deck
+# BoomStep · Krassheit
 
 **Spielen: https://altibo.github.io/BoomStep/** · Offlinefähige Musik-PWA, keine Anmeldung, keine Samples, kein KI-Backend.
 
 Neues eigenes Standardpaket **Berlin Bounce** und **sechs einmalige Live-Specials**. Vier laufende Spuren, **alle musikalischen Regler direkt auf einer Oberfläche**, ein XY-Feld zum Spielen statt verschachtelter Menüs. Kopfhörer empfohlen. Die Versionen bleiben über Git-Historie und separate Feature-/Deploybranches nachvollziehbar.
 
-## Orbit Deck · 3.1 / R4 (R3-Geometrie)
+## Krassheit · 3.2
+
+**KRASSHEIT 0–100** sitzt als großer horizontaler 44px-Makrofader direkt im bisherigen Header, neben Soundpaket und **LICHT BEAT/RUHIG**. Keine zusätzlichen Musikzeilen oder Untermenüs; alle bisherigen Regler bleiben erreichbar.
+
+- **0 Locker** = unveränderte eigene Pattern-/Mix-Baseline. **50 Druck / 100 Abriss** addieren bis zu 0,65 Master-Drive und 0,25 Pump (jeweils begrenzt), mehr Kick-Sättigung, hellere Synthese und beim Bounce-Bass mehr FM-Kante. 12% zusätzliche Ausgangsreserve am Maximum; Kompressor und Safety bleiben. Es ist ausdrücklich kein bloßer Lautstärkeregler.
+- Ab 25 mehr leise Hats, ab 50 Rim-Percussion, ab 55 kurze harmonische Riff-Antworten, ab 75 zusätzliche 32tel-Snare-Akzente am Ende jedes achten Takts. Ausschließlich deterministisch auf dem bestehenden musikalischen Raster; keine zufälligen Bursts, Tempo-/Tonart-/Phase- oder heimlichen Patternwechsel. Mute/Solo und manuelle Faderwerte werden nicht überschrieben; Zurückziehen auf 0 entfernt die Makrozusätze wieder.
+- **FX AUS** setzt zusätzlich Krassheit auf **0**, ansonsten gelten die bisherigen neutralen Filter-/Effektresets. Patterns, Pegel, Mute/Solo und Lichtwahl bleiben. **REC** erfasst die live gefahrene Krassheit im tatsächlichen Post-Master-WAV.
+- Cyan → helles Violett → Pink, weicher lokaler Glow aus der echten Audiozeit (maximal 3 Pulse/s, bei schnellerem Tempo automatisch halbes Tempo). Kein Fullscreen-/Stroboskopblitz. Pause/Stop ohne Beatpuls. **RUHIG** und `prefers-reduced-motion` unterdrücken Puls und automatisches Pad-Aufblinken, behalten statische Farben/Glow. Die direkte Lichtwahl bleibt lokal gespeichert. Amber bleibt ausschließlich Pending; REC bleibt rot.
+- Sessionformat V3 bekommt validierte additive Felder `intensity` (0–1) und `beatLights` (Boolean). Fehlende Felder in alten V1–3-/Orbit-Sessions werden mit **0 / true** ergänzt: bisheriger Klang unverändert, bestehende Indexmigration bleibt erhalten.
+- Neue Tests prüfen Migration/Grenzen, additive Baseline, deterministische Notendichte/Phase, Palette, Lichtfrequenz/Stillstand/Reduced Motion, echten Live-WAV und nicht nur gainbedingte PCM-Unterschiede. [Lokaler Messbericht](docs/krassheit-qa.md). Kein behaupteter subjektiver Hörtest oder Safari-/Echtgeräteabnahme.
+
+## Orbit Deck · 3.1 / R4 (historische Freigabe, R3-Geometrie)
 
 Der R4-Stand ist nach unabhängigen Screenshot-/Interaktionsreviews zur Veröffentlichung freigegeben. Der Produktionsbuild wird separat über `gh-pages` bereitgestellt; die Quellcode-PRs bleiben bewusst ohne automatischen Main-Merge gestapelt.
 
@@ -37,7 +48,7 @@ ANUUK wurde anhand seines [offiziellen Amplia-Artistprofils](https://www.ampliab
 
 **HITPEGEL** regelt alle sechs Pads direkt. Die Specials gehen durch denselben Masterfilter, Drive, Flanger, Echo, Hall, Gate, Kompressor und Safety-Ausgang wie der Jam und sind wirklich in der WAV-Aufnahme enthalten. Spur-Mute/Solo betrifft den Loop, nicht den separaten Special-Bus; PUMP duckt weiterhin die Loopspuren zur Kick.
 
-Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, startet aber **nicht heimlich den Loop**. Bei pausiertem Jam bleibt der Loopbus stumm; vorhandene Lookahead-Ereignisse werden beim Fortsetzen um die vergangene Audiozeit verschoben, ohne Clock-/Patternphase voranzusetzen. Eine endliche One-Shot-Hüllkurve bleibt nicht an Pointer-Hold gebunden. Mehrere Pads/Finger und wiederholte Taps sind erlaubt. Bis zu **acht Soundgruppen** überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung, statt neue Taps still zu ignorieren. Alle Quellen und Gruppen werden nach Ende freigegeben. **■** stoppt Loop und Specials; **FX AUS** bleibt ein reiner Effektreset.
+Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, startet aber **nicht heimlich den Loop**. Bei pausiertem Jam bleibt der Loopbus stumm; vorhandene Lookahead-Ereignisse werden beim Fortsetzen um die vergangene Audiozeit verschoben, ohne Clock-/Patternphase voranzusetzen. Eine endliche One-Shot-Hüllkurve bleibt nicht an Pointer-Hold gebunden. Mehrere Pads/Finger und wiederholte Taps sind erlaubt. Bis zu **acht Soundgruppen** überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung, statt neue Taps still zu ignorieren. Alle Quellen und Gruppen werden nach Ende freigegeben. **■** stoppt Loop und Specials; **FX AUS** bleibt ein Effekt-/Makroreset.
 
 ## Eine Oberfläche, keine musikalischen Untermenüs
 
@@ -51,7 +62,7 @@ Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, s
 - Y steuert die Tiefe des gewählten Effekts: **MASTER-ECHO** (tempoabhängiges 3/16-Delay mit Feedback), **FLANGER** (echte modulierte Kurzdelay-/Feedback-Schaltung), **GATE** (audiozeit-synchrones Gain-Gating) oder **DRIVE** (parallele Waveshaper-Sättigung).
 - GATE nochmals tippen schaltet sichtbar **1/8 ↔ 1/16**. Es ist bewusst kein erfundener Sample-Stutter.
 - Ohne HOLD fällt die Position beim Loslassen auf X-Mitte/Y-null zurück. Gain-/Filter-Rampen vermeiden harte Parametersprünge; vorhandene Echotails klingen musikalisch aus. **HOLD** vor oder während der Geste hält die letzte Position. HOLD ausschalten löst sie wieder.
-- **FX AUS** neutralisiert XY, Masterfilter, Hall, Drive, Pump und Spurfilter/Spur-Echo-Pegel, lässt aber Patterns, Lautstärken und Mute/Solo unberührt. Gate wird auf Durchlass gerampt. Limiter/Safety bleiben aktiv.
+- **FX AUS** setzt Krassheit auf 0 und neutralisiert XY, Masterfilter, Hall, Drive, Pump und Spurfilter/Spur-Echo-Pegel, lässt aber Patterns, Lautstärken und Mute/Solo unberührt. Gate wird auf Durchlass gerampt. Limiter/Safety bleiben aktiv.
 - Pointer-Capture hält die Geste beim Verlassen des Felds; nur der erste Pointer steuert XY, ein weiterer Finger kann Spuren bedienen. Pointer-Cancel löst sicher. Pfeiltasten steuern Farbe/Tiefe, Escape ist FX AUS, Verlassen des Feldes löst ohne HOLD.
 
 **PLAY / PAUSE / Stop / REC / SAVE / HOLD / FX AUS** sind direkt erreichbar. Keine Zahnrad- oder Mixdialoge. Nur Hilfe sowie Session-Dateiimport sind sekundär; dort stecken keine musikalischen Funktionen.
@@ -67,9 +78,9 @@ Automatisierte Chromium-Prüfung in CSS-Pixeln:
 | 320 × 568      |                      unten bei 936 px | 368px Musik-Scroll; zusätzliche Namenszeilen und zweireihiger Transport |
 | 844 × 390 quer |                      unten bei 638 px | 248px Musik-Scroll                                                      |
 
-Nichtmusikalische Dateiaktionen/Hilfe liegen dahinter und dürfen unter dem Fold stehen. Die 59 direkten musikalischen Trefferflächen sind per echten DOM-Bounds geprüft; zusätzlich prüft die Suite Fontgrößen, sichtbare Labels, Clipping und Achsenabstände. Orbit-Ziffern: 14 SVG-Einheiten bei 144/160-Darstellung = effektiv 12,6 CSS-Pixel, ebenfalls gegen den tatsächlich gerenderten Maßstab geprüft. Lange Patternnamen dürfen nur in der schmalen Namenszelle auf zwei Zeilen gekürzt werden; vollständiger Name bleibt über ARIA und die Pattern-Tasten verfügbar. Pending steht am Band und als verständlicher Text in der zentralen Meldung, Details zusätzlich für Screenreader.
+Nichtmusikalische Dateiaktionen/Hilfe liegen dahinter und dürfen unter dem Fold stehen. Die 61 direkten musikalischen Trefferflächen sind per echten DOM-Bounds geprüft; zusätzlich prüft die Suite Fontgrößen, sichtbare Labels, Clipping und Achsenabstände. Orbit-Ziffern: 14 SVG-Einheiten bei 144/160-Darstellung = effektiv 12,6 CSS-Pixel, ebenfalls gegen den tatsächlich gerenderten Maßstab geprüft. Lange Patternnamen dürfen nur in der schmalen Namenszelle auf zwei Zeilen gekürzt werden; vollständiger Name bleibt über ARIA und die Pattern-Tasten verfügbar. Pending steht am Band und als verständlicher Text in der zentralen Meldung, Details zusätzlich für Screenreader.
 
-Alle direkten musikalischen Eingabeflächen — Pattern, STUMM/SOLO, FX, Specials, Transport, Paketauswahl, XY und alle 17 Fader — haben **mindestens 44×44 CSS-Pixel**. Fader sind echte 44px hohe Felder, keine überlappenden vergrößerten Trefferzonen. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
+Alle direkten musikalischen Eingabeflächen — Pattern, STUMM/SOLO, FX, Specials, Transport, Paketauswahl, XY und alle 18 Fader (17 bisherige plus Krassheit) — haben **mindestens 44×44 CSS-Pixel**. Fader sind echte 44px hohe Felder, keine überlappenden vergrößerten Trefferzonen. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
 
 ## Aufnahme und Sessions
 
@@ -94,16 +105,16 @@ Node **22.12+** oder **24 LTS**, npm:
 ```sh
 npm ci
 npm run dev                   # Entwicklung, Port 5173
-npm test                      # 26 Node-Tests
+npm test                      # 33 Node-Tests
 npm run lint
 npm run build                 # statische PWA in dist/
 npm run preview               # Produktionsvorschau, Port 4173
 npx playwright install chromium
-npm run test:browser           # 37 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
+npm run test:browser           # 42 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
 npm audit --omit=dev
 ```
 
-`src/music.js`: Paketindizes, Sessionmigration, PatternClock. `src/bounce-music.js`: neue Bounce-Komposition. `src/specials.js`: finite, tonartbezogene Special-Pläne. `src/legacy-music.js`: ursprüngliche Classic-Komposition. `src/synth.js`: deterministische Stimmen. `src/fx.js`: reine XY-/Release-/Gate-/Kurvenentscheidungen. `src/engine.js`: gemeinsamer AudioContext, 20-ms-Wecktimer, samplezeitgeplanter 100-ms-Lookahead, Ducking und Effektgraph. `src/main.js` / `src/style.css`: direktes Mischpult. `public/recorder.js` / `src/wav.js`: echter PCM-Capture/WAV. `public/sw.js` / `vite.config.js`: pro Build und App-Scope versionierter Offlinecache.
+`src/intensity.js`: additives Makro, deterministische Dichte und Audiozeit-Lichtpalette. `src/music.js`: Paketindizes, Sessionmigration, PatternClock. `src/bounce-music.js`: neue Bounce-Komposition. `src/specials.js`: finite, tonartbezogene Special-Pläne. `src/legacy-music.js`: ursprüngliche Classic-Komposition. `src/synth.js`: deterministische Stimmen. `src/fx.js`: reine XY-/Release-/Gate-/Kurvenentscheidungen. `src/engine.js`: gemeinsamer AudioContext, 20-ms-Wecktimer, samplezeitgeplanter 100-ms-Lookahead, Ducking und Effektgraph. `src/main.js` / `src/style.css`: direktes Mischpult. `public/recorder.js` / `src/wav.js`: echter PCM-Capture/WAV. `public/sw.js` / `vite.config.js`: pro Build und App-Scope versionierter Offlinecache.
 
 Node-Tests prüfen zusätzlich die sechs distinkten finiten Pläne, F-Moll und indexerhaltende V2-Migration. Browser-Tests ergänzen Standalone-Taps ohne Loopstart, Retrigger/Keyboard/achtfaches Voice-Stealing und Cleanup, unveränderte Clock/Patterns, Pause mit Specials, echte Special-PCM-Aufnahme bei stummen Loopspuren, Offline-Pads und neue Layoutgrößen. Die bisherige Suite bleibt erhalten. Node-Tests erhalten die früheren Clock-/WAV-/Capture-Regressionen und prüfen zusätzlich Migration, FX-Ziele, Release/Hold/DRY, Gatephase, Viertaktphase/Achttaktfills und unterschiedliche Patterns. Browser-Tests erhalten die früheren Audio-/Session-/Offline-Prüfungen und ergänzen Layouts, XY-Gesten, echte live aufgenommene Drive-Änderung, 48 Offline-Renders mit Signalunterschieden zwischen allen Hard-House-Varianten, begrenzte Peaks und hörbare Signaländerungen durch alle Effektwege. Native DSP-Ausgaben dürfen kleine numerische Abweichungen haben; Kompositionsereignisse bleiben deterministisch.
 

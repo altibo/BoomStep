@@ -21,6 +21,7 @@ export function createVoice(
   noise,
   register = () => {},
 ) {
+  const energy = Math.max(0, Math.min(1, event.energy || 0));
   const e = event,
     kind = e.kind,
     duration =
@@ -110,7 +111,14 @@ export function createVoice(
   function filter(type, freq, q, target) {
     const f = c.createBiquadFilter();
     f.type = type;
-    f.frequency.setValueAtTime(freq, time);
+    f.frequency.setValueAtTime(
+      Math.min(
+        18000,
+        freq *
+          (type === "lowpass" || type === "bandpass" ? 1 + energy * 0.7 : 1),
+      ),
+      time,
+    );
     f.Q.value = q;
     f.connect(target);
     nodes.push(f);
@@ -128,7 +136,8 @@ export function createVoice(
   if (kind === "kick" || kind === "bouncekick") {
     const shaper = c.createWaveShaper();
     shaper.curve = driveCurve(
-      kind === "bouncekick" ? 1.85 : pack.character === "steel" ? 3.8 : 2.5,
+      (kind === "bouncekick" ? 1.85 : pack.character === "steel" ? 3.8 : 2.5) +
+        energy * 3,
       1025,
     );
     shaper.oversample = "2x";
@@ -157,7 +166,10 @@ export function createVoice(
       fm = c.createGain();
     nodes.push(fm);
     fm.connect(carrier.frequency);
-    fm.gain.setValueAtTime(hz(e.note) * 2.4 * (e.accent || 1), time);
+    fm.gain.setValueAtTime(
+      hz(e.note) * 2.4 * (e.accent || 1) * (1 + energy * 0.5),
+      time,
+    );
     fm.gain.exponentialRampToValueAtTime(
       0.5,
       time + Math.min(duration * 0.8, 0.13),

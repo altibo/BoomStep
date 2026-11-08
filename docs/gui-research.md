@@ -38,3 +38,7 @@ R3 ergänzt die bisherigen Regressionen um echte Bounds aller 59 musikalischen Z
 ## R4 und Freigabe
 
 Die UI verwendet dieselbe vorhandene `audible()`-Regel wie der Mixer: Solo-ausgeschlossene Karten sind dunkel und zeigen Solo-aus; explizites Mute hat mit Stumm Vorrang, ohne den tatsächlichen Mutestate umzuschreiben. Mehrere Solos, Patternphase und Amber-Pending bleiben korrekt. Keine weitere Layout- oder Engineänderung. Final lokal: 26 Unit- und 37 Chromium-Browserfälle bestanden; beide unabhängigen Reviews freigegeben. Release erfolgt als normaler Source-PR plus separat fortgeschriebener `gh-pages`-Build, ohne Main-Merge.
+
+## Erweiterung 3.2: Krassheit / Beat-Licht
+
+Die früheren Aussagen „keine neuen Sessionparameter“ beziehen sich auf Orbit/R4. 3.2 ergänzt validierte `intensity`-/`beatLights`-Felder in V3; alte Sessions starten klangneutral bei 0. Ein direkt sichtbarer 44px-Makrofader und 44px-Lichttaster ersetzen nur die redundante Header-Marke, nicht musikalische Funktionen. Der Audiozeit-Orbit bleibt dieselbe gemeinsame Phase; daraus wird weicher lokaler Glow statt einer unabhängigen CSS-Animation abgeleitet. Statische Palette bei Ruhig/Reduced Motion, Amber weiterhin nur Pending. Keine neuen Fremdassets oder behaupteten Geräte-/Hörtests.
