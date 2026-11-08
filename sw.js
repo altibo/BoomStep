@@ -1,5 +1,5 @@
 const PREFIX = `boomstep:${self.registration.scope}:`;
-const CACHE = `${PREFIX}15b5997b1fcc`;
+const CACHE = `${PREFIX}1fdfef0c3023`;
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
