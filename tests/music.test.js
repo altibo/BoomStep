@@ -10,12 +10,12 @@ import {
   nextBar,
 } from "../src/music.js";
 import { encodeWav } from "../src/wav.js";
-test("48 composed patterns are deterministic and valid in all four bars", () => {
-  for (let p = 0; p < 3; p++)
+test("96 Hard House and Classic patterns are deterministic and valid in all four bars", () => {
+  for (let p = 0; p < PACKS.length; p++)
     for (let t = 0; t < 4; t++)
       for (let v = 0; v < 4; v++) {
         let count = 0;
-        for (let s = 0; s < 64; s++) {
+        for (let s = 0; s < 128; s++) {
           const events = eventsAt(p, t, v, s);
           assert.deepEqual(events, eventsAt(p, t, v, s));
           count += events.length;
@@ -37,7 +37,10 @@ test("next bar clock switches exactly at boundary without resetting harmonic pha
   const event = c.tick();
   assert.equal(event.step, 32);
   assert.equal(event.variants[1], 2);
-  assert.equal(eventsAt(0, 1, 2, event.step)[0].note, PACKS[0].roots[2] - 12);
+  assert.equal(
+    eventsAt(0, 1, 2, event.step + 2)[0].note,
+    PACKS[0].roots[2] - 12,
+  );
 });
 test("queue replaces, selecting active cancels, stop applies and resets", () => {
   const c = new PatternClock(initialSession());
@@ -71,7 +74,7 @@ test("session JSON roundtrip and strict hostile/invalid data rejection", () => {
   for (const bad of [
     null,
     {},
-    { ...s, pack: 3 },
+    { ...s, pack: 99 },
     { ...s, master: NaN },
     { ...s, tracks: [] },
     { ...s, tracks: s.tracks.map((t) => ({ ...t, variant: 99 })) },
@@ -95,7 +98,7 @@ test("WAV has real interleaved stereo PCM and correct RIFF lengths", () => {
 });
 
 test("all variants in a package/track have distinct event sequences", () => {
-  for (let p = 0; p < 3; p++)
+  for (let p = 0; p < PACKS.length; p++)
     for (let t = 0; t < 4; t++) {
       const signatures = Array.from({ length: 4 }, (_, v) =>
         JSON.stringify(

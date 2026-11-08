@@ -1,5 +1,5 @@
 {
-  "name": "BoomStep · Pocket Jam",
+  "name": "BoomStep · Hard House Live",
   "short_name": "BoomStep",
   "lang": "de",
   "start_url": "./",
@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#06101d",
   "theme_color": "#061322",
-  "description": "Vier Spuren. Ein Daumen. Dein eigener Offline-Jam.",
+  "description": "Hard House, vier Spuren und direkte XY-Effekte. Dein Offline-Rave.",
   "icons": [
     {
       "src": "icon-192.png",
