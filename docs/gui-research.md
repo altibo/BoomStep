@@ -17,7 +17,7 @@ Primärseiten am 8. November 2026 tatsächlich geöffnet und gelesen; keine Ger�
 
 Direkte Volume/Filter/Echo-Regler, Mute/Solo, Mastereffekte, sechs Specials, REC/HOLD/FX AUS bleiben ohne musikalische Untermenüs. Bestehendes Sessionformat V3 genügt: keine neuen gespeicherten Klangparameter oder Szenen, V1–3-Migration unverändert. Der Paint-Timer läuft nur bei aktiver Performance/Aufnahme/endlich ausklingenden Pads, nicht dauerhaft im Leerlauf. Keine blinkende CSS-Animation; `prefers-reduced-motion` bleibt berücksichtigt. Safari/Echtgerät und Nutzer-Hörabnahme sind nicht behauptet.
 
-## Reviewkorrektur R2 (noch lokal, nicht veröffentlicht)
+## Reviewkorrektur R2 (historischer lokaler Reviewstand)
 
 - Alle musikalischen Labels/Gesten-/Statushinweise mindestens **11 CSS-px**, überwiegend 12px; Orbitziffern 12px. Keine Viewport-Skalierung von Text. Redundante Kleinschrift und CSS-Altlasten entfernt. Achsen stehen außerhalb des XY-Pucks und überschneiden ihn nicht. Primäre Ziele und alle 17 Fader bleiben mindestens44×44px. Mehr Scrollbedarf wird bewusst statt unlesbarer Ein-Screen-Passform akzeptiert.
 - **Absichtliches Abbrechen:** mehr als24px ober-/unterhalb des Bandes = weiß markiertes Abbrechen; dort loslassen verwirft. Sicherheitszone vermeidet Zittern. Reentry schaltet zurück zur Auswahl. Horizontales Ziehen bleibt geklemmt. Escape (auch wenn XY noch Fokus besitzt), Systempointercancel und lost capture verwerfen ebenfalls. Bereits vorgemerkte Varianten bleiben unverändert. Pointercapture und `touch-action:none` sichern die Musikgeste; außerhalb der Musikflächen bleibt vertikales Scrollen möglich.
@@ -27,10 +27,14 @@ Direkte Volume/Filter/Echo-Regler, Mute/Solo, Mastereffekte, sechs Specials, REC
 
 26 Unit-/32 Browserfälle (bestehende Regressionen erhalten), inklusive echter Mouse-/Touchgesten, Hoch-/Runterabbruch, 24px-Toleranz, Reentry/Commit, Escape, Systemcancel/lost capture, Mindestschriftgröße/Clipping, getrennte Farben und echte Aufnahme. Genaue aktuelle Layoutmessungen und Screenshots in README bzw. lokalen QA-Artefakten. Safari/Echtgerät/Hörabnahme weiterhin unbestätigt.
 
-## Reviewkorrektur R3 (weiter nur lokal)
+## Reviewkorrektur R3 (historischer lokaler Reviewstand)
 
 Die R2-Höhe um 1236px war eine echte Regression. R3 entfernt Redundanzen statt Schrift oder Touchziele zu verkleinern: keine zusätzliche Track-Statuszeile, Patternname im Spurkopf (voller Name per ARIA), zentrale Auswahl-/Abbruch-/Pending-Meldung, Packdaten im 44px-Header, vier Masterfader plus HITPEGEL in einer gemeinsamen 44px-Zeile. Die sechs Specials sind wieder eine klare 3×2-Bank mit 48px hohen Pads; die Überschrift erklärt Einmal-/Strum-Verhalten. Dateiaktionen/Hilfe stehen erst hinter dem musikalischen Bereich.
 
 Der Performancebereich braucht 184px, enthält ein 96×88px-XY-Feld, 144px-Orbit mit effektiv 12,6px-Ziffern und vier 67px-FX-Pads. Achsen bleiben außerhalb des Pucks; Phase und Gestenfeedback besitzen getrennte, nicht überlappende Statusflächen, lange Abbruchmeldungen dürfen bei 320px auf zwei 11px-Zeilen umbrechen. Kein CSS-Kleinskalieren bei kleineren Viewports. Amber-, Cancel-, Routing- und Reset-Verträge aus R2 bleiben unverändert.
 
-R3 ergänzt die bisherigen Regressionen um echte Bounds aller 59 musikalischen Ziele (mindestens 44×44, alle bis maximal y840 auf 390×844), tatsächlich gerenderte SVG-Schriftgröße und einen 320px-Langstatus-/Aufnahmetest. Bestehende Layouttests wurden von der R2-Scrollpflicht auf die präzise Passform bei 390×844 umgestellt; kleine Screens müssen weiterhin ehrlich scrollen. Aktuelle Messergebnisse/Dateipfade stehen in README und lokalem R3-Reviewbericht. Weiter kein Push/Deployment bis zur unabhängigen Freigabe.
+R3 ergänzt die bisherigen Regressionen um echte Bounds aller 59 musikalischen Ziele (mindestens 44×44, alle bis maximal y840 auf 390×844), tatsächlich gerenderte SVG-Schriftgröße und einen 320px-Langstatus-/Aufnahmetest. Bestehende Layouttests wurden von der R2-Scrollpflicht auf die präzise Passform bei 390×844 umgestellt; kleine Screens müssen weiterhin ehrlich scrollen. Aktuelle Messergebnisse/Dateipfade stehen in README und lokalem R3-Reviewbericht. Dieser R3-Stand wurde noch nicht veröffentlicht. Nach der gezielten R4-Solokorrektur sind die unabhängigen Reviews abgeschlossen und die Veröffentlichung freigegeben.
+
+## R4 und Freigabe
+
+Die UI verwendet dieselbe vorhandene `audible()`-Regel wie der Mixer: Solo-ausgeschlossene Karten sind dunkel und zeigen Solo-aus; explizites Mute hat mit Stumm Vorrang, ohne den tatsächlichen Mutestate umzuschreiben. Mehrere Solos, Patternphase und Amber-Pending bleiben korrekt. Keine weitere Layout- oder Engineänderung. Final lokal: 26 Unit- und 37 Chromium-Browserfälle bestanden; beide unabhängigen Reviews freigegeben. Release erfolgt als normaler Source-PR plus separat fortgeschriebener `gh-pages`-Build, ohne Main-Merge.

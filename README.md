@@ -4,9 +4,9 @@
 
 Neues eigenes Standardpaket **Berlin Bounce** und **sechs einmalige Live-Specials**. Vier laufende Spuren, **alle musikalischen Regler direkt auf einer Oberfläche**, ein XY-Feld zum Spielen statt verschachtelter Menüs. Kopfhörer empfohlen. Die Versionen bleiben über Git-Historie und separate Feature-/Deploybranches nachvollziehbar.
 
-## Orbit Deck · lokaler Reviewstand 3.1 / R4 (R3-Geometrie)
+## Orbit Deck · 3.1 / R4 (R3-Geometrie)
 
-Noch **nicht veröffentlicht**: der aktuelle UI-Stand wartet auf unabhängigen Screenshot-/Interaktionsreview. Die öffentliche Pages-Version bleibt bis zur Freigabe unverändert.
+Der R4-Stand ist nach unabhängigen Screenshot-/Interaktionsreviews zur Veröffentlichung freigegeben. Der Produktionsbuild wird separat über `gh-pages` bereitgestellt; die Quellcode-PRs bleiben bewusst ohne automatischen Main-Merge gestapelt.
 
 - **Patternbänder**: vier diskrete große Segmente je Spur bleiben direkt tippbar. Ziehen = weiße Vorschau; Loslassen = letzte Variante taktgenau vormerken; Mehr als 24px nach oben/unten herausziehen = sichtbares Abbrechen, dort Loslassen verwirft; Reentry erlaubt wieder Vormerken. Escape/Systemcancel/lost capture verwerfen ebenfalls, vorhandene Pending-Wahl bleibt. Keine Hörvorschau. Cyan/Auswahl bzw. Spielt, ausschließlich Amber/vorgemerkt und Weiß/Ziehauswahl trennen die Zustände. Pfeile/Home/End und Enter/Space bleiben nutzbar. Kein behauptetes kontinuierliches Klangmorphing.
 - **Strum Specials**: über die sechs sichtbaren Pads streichen; jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten wiederholt nie. Fingerhistorien sind unabhängig, Pointercancel räumt die Geste auf, endliche Sounds klingen aus. Tastatur weiterhin möglich.
