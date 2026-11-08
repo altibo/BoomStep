@@ -1,0 +1,25 @@
+{
+  "name": "BoomStep · Pocket Jam",
+  "short_name": "BoomStep",
+  "lang": "de",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#06101d",
+  "theme_color": "#061322",
+  "description": "Vier Spuren. Ein Daumen. Dein eigener Offline-Jam.",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
