@@ -4,6 +4,13 @@ const out = "test-results/gui-artifacts";
 test.beforeEach(async () => mkdir(out, { recursive: true }));
 const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 async function move(page, selector) {
+  await page
+    .locator(selector)
+    .evaluate((el) =>
+      (el.closest(".specials") || el.closest(".track") || el).scrollIntoView({
+        block: "center",
+      }),
+    );
   const p = center(await page.locator(selector).boundingBox());
   await page.mouse.move(p.x, p.y);
   return p;
@@ -117,6 +124,7 @@ test("two simultaneous touch fingers have independent strum histories", async ({
     enabled: true,
     maxTouchPoints: 5,
   });
+  await page.locator("#special-board").scrollIntoViewIfNeeded();
   const coords = [];
   for (const id of ["bark", "bass", "fill"])
     coords.push(
@@ -183,6 +191,7 @@ test("new strum gestures and held FX really reach post-master stereo WAV", async
   );
   await page.locator("#hold").click();
   await page.locator('[data-fx="drive"]').click();
+  await page.locator("#xy").scrollIntoViewIfNeeded();
   const xy = await page.locator("#xy").boundingBox();
   await page.mouse.click(xy.x + xy.width * 0.5, xy.y + xy.height * 0.2);
   for (const [i, id] of [
@@ -251,7 +260,7 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
     ).toBe(true);
     const box = await page.locator("#performance").boundingBox();
     console.log("Orbit layout", width, height, box);
-    if (height === 844) expect(box.y + box.height).toBeLessThanOrEqual(height);
+    expect(box.y + box.height).toBeGreaterThan(height);
     const bad = await page
       .locator(
         ".pattern,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",
@@ -281,6 +290,7 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
   await page.locator('[data-track="1"][data-variant="3"]').click();
   await page.locator("#hold").click();
   await page.locator('[data-fx="flanger"]').click();
+  await page.locator("#xy").scrollIntoViewIfNeeded();
   const xy = await page.locator("#xy").boundingBox();
   await page.mouse.click(xy.x + xy.width * 0.6, xy.y + xy.height * 0.3);
   await page.screenshot({
@@ -294,10 +304,10 @@ test("reduced motion shows true bar changes without a continuously moving head",
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
   await expect(page.locator(".pattern.active .pattern-cue")).toHaveText([
-    "BEREIT",
-    "BEREIT",
-    "BEREIT",
-    "BEREIT",
+    "Auswahl",
+    "Auswahl",
+    "Auswahl",
+    "Auswahl",
   ]);
   const idleMutations = await page.evaluate(
     () =>

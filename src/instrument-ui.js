@@ -25,3 +25,7 @@ export function orbitPoint(progress, radius = 69) {
 export function glideEntry(previous, current) {
   return { current, trigger: current !== null && previous !== current };
 }
+// Deliberate escape corridor; horizontal drags still clamp to first/last choice.
+export function ribbonCancelled(y, rect, margin = 24) {
+  return y < rect.top - margin || y > rect.bottom + margin;
+}

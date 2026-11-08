@@ -1,5 +1,6 @@
 import {
   ribbonVariant,
+  ribbonCancelled,
   orbitPosition,
   orbitPoint,
   glideEntry,
@@ -33,10 +34,10 @@ const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
 <section id="performance" aria-label="Orbit Deck Performance">
-<header><h1>BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span id="pack-meta"></span></div></header>
-<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span id="name-${i}"></span><span class="pending" id="pending-${i}" aria-live="polite"></span></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: tippen oder ziehen, loslassen wählt, Abbruch verwirft">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><div class="track-bottom">${slider("VOL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
-<section class="master" aria-label="Direkte Mastereffekte">${slider("MASTER FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
-<section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><div class="orbit-deck"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
+<header><h1>BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select></div></header><div class="package-meta" id="pack-meta"></div><p class="gesture-guide">Ziehen wählt · loslassen merkt vor.<br>Nach oben/unten herausziehen verwirft.</p>
+<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: ziehen wählt, loslassen merkt vor; mehr als 24 Pixel nach oben oder unten herausziehen verwirft; Escape bricht ab">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><div class="track-status"><span id="name-${i}"></span><span class="pending" id="pending-${i}" aria-live="polite"></span></div><div class="track-bottom">${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
+<section class="master" aria-label="Direkte Mastereffekte"><h2>MASTER</h2>${slider("FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
+<section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><p class="phrase-info">8-Takt-Phrase · 4 Akkorde × 2</p><div class="orbit-deck"><strong id="xy-label">MASTER-ECHO</strong><div class="xy-axis">Dunkel ← Farbe → Hell</div><div class="orbit-visual"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
   { length: 8 },
   (_, i) => {
     const a = orbitPoint(i / 8 + 0.014),
@@ -48,13 +49,13 @@ app.innerHTML = `<main>
   return `<text x="${p.x}" y="${p.y + 3}">${i + 1}</text>`;
 }).join(
   "",
-)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div class="xy-axis">DUNKEL ↔ HELL</div><strong id="xy-label">ECHO</strong><span id="xy-hint">Ziehen · loslassen = trocken</span><i id="xy-dot"></i><span class="xy-depth">↑ TIEFE</span></div><div id="orbit-status">TAKT 1/8 · BEAT 1</div></div><div class="fx-pads" role="group" aria-label="Effektmodus"><button data-fx="echo">ECHO<span>3/16 · Feedback</span></button><button data-fx="flanger">FLANGE<span>Moduliert</span></button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippe für 1/16</span></button><button data-fx="drive">DRIVE<span>Sättigung</span></button></div></section>
-<section class="specials" aria-label="Einmalige Live-Specials"><div class="specials-head"><h2>STRUM SPECIALS <small>TIPPE ODER STREICHE →</small></h2>${slider("SPECIAL LEVEL", "specialLevel", session.specialLevel)}</div><div class="special-pads" id="special-board" aria-label="Sechs Einmal-Pads: über Feldgrenzen streichen spielt je einen Hit, Halten wiederholt nicht">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}<span>${p.hint}</span></button>`).join("")}</div></section>
-<div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic" title="Alle Effekte neutral, Musik bleibt">DRY!</button></div>
+)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div></div><div class="xy-depth">↑ Effektstärke</div><div id="xy-hint">Loslassen: XY neutral</div><div id="orbit-status">Takt 1/8 · Beat 1</div></div><div class="fx-pads" role="group" aria-label="Master-Effektmodus"><button data-fx="echo">MASTER-ECHO<span>3/16 · Feedback</span></button><button data-fx="flanger">FLANGER<span>Moduliert</span></button><button data-fx="gate">GATE<span id="gate-label">1/8 · tippen: 1/16</span></button><button data-fx="drive">DRIVE<span>Sättigung</span></button></div></section>
+<section class="specials" aria-label="Einmalige Live-Specials"><div class="specials-head"><h2>SPECIALS <small>Tippen oder streichen</small></h2>${slider("SPECIAL-PEGEL", "specialLevel", session.specialLevel)}</div><div class="special-pads" id="special-board" aria-label="Sechs Einmal-Pads: über Feldgrenzen streichen spielt je einen Hit, Halten wiederholt nicht">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}<span>${p.hint}</span></button>`).join("")}</div></section>
+<div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div><p class="reset-help">FX AUS: Filter, Echo, Hall, Drive, Pump &amp; XY neutral. Nachklang klingt aus; Schutzlimiter bleibt.</p>
 </section>
-<div id="notice" role="status">Patternband ziehen → loslassen wählt. Specials streichen → ein Hit je Feld.</div><a id="download" hidden>WAV herunterladen</a>
+<div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen zeigt eine helle Vorschau; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Abbrechen oder Fingerverlust verwirft nur die Vorschau. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = klingt; Amber/TAKT = vorgemerkt; heller Rahmen/LOS = Vorschau. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. SPECIAL LEVEL regelt alle Pads. ■ beendet auch Specials; DRY! setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Echo-Send. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. DRY! setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = DRY!.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE/Öffnen sichert einen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Lokale Synthese · keine Samples · Vordergrund-Audio</footer></main>`;
+<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen markiert nur eine Auswahl, ohne sie abzuspielen; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Band ziehen zeigt Abbrechen; dort loslassen verwirft nur die Auswahl. Zurück ins Band ziehen erlaubt wieder Vormerken. Escape, Systemabbruch oder Fingerverlust verwerfen ebenfalls. Keine Hörvorschau. Auf Band, XY und Specials ist Scrollen zugunsten der Musikgeste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = aktives Pattern/gewählter FX-Modus; ausschließlich Amber = vorgemerkter Patternwechsel; weiß = unverbindliche Ziehauswahl. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. SPECIAL-PEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Master-Filter, Hall, Drive und Pump sind immer direkt erreichbar. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · eigene Synthese</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -114,13 +115,25 @@ function refresh() {
   session.tracks.forEach((t, i) => {
     const pending = engine.clock.pending.get(i),
       active = engine.running || engine.paused ? pos.variants[i] : t.variant;
-    $("#name-" + i).textContent = namesFor(session.pack, i)[active];
+    const gesture = ribbonGestures.get(i);
+    $("#name-" + i).textContent = gesture
+      ? gesture.cancel
+        ? "Abbrechen · loslassen verwirft"
+        : `${gesture.variant + 1} gewählt · loslassen vormerken`
+      : `${engine.running ? "Spielt" : engine.paused ? "Pause" : "Auswahl"}: ${namesFor(session.pack, i)[active]}`;
+    const band = $(`[data-ribbon="${i}"]`);
+    band.classList.toggle("canceling", !!gesture?.cancel);
+    band.dataset.gesture = gesture
+      ? gesture.cancel
+        ? "cancel"
+        : "choose"
+      : "idle";
     $("#track-" + i).classList.toggle("muted", t.mute);
     $("#track-" + i).classList.toggle("soloed", t.solo);
     $(`[data-mute="${i}"]`).setAttribute("aria-pressed", String(t.mute));
     $(`[data-solo="${i}"]`).setAttribute("aria-pressed", String(t.solo));
     $("#pending-" + i).textContent = pending
-      ? `→${pending.variant + 1} T${Math.floor((pending.at % 128) / 16) + 1}`
+      ? `${pending.variant + 1} ab Takt ${Math.floor((pending.at % 128) / 16) + 1}`
       : "";
     document.querySelectorAll(`[data-track="${i}"]`).forEach((el) => {
       const v = Number(el.dataset.variant);
@@ -130,18 +143,18 @@ function refresh() {
       el.classList.toggle("active", v === active);
       el.classList.toggle("queued", pending?.variant === v);
       el.setAttribute("aria-pressed", String(v === active));
-      const preview = ribbonGestures.get(i)?.variant === v;
+      const preview = !gesture?.cancel && gesture?.variant === v;
       el.classList.toggle("scrub-preview", preview);
       el.querySelector(".pattern-cue").textContent = preview
-        ? "LOS →"
+        ? "Wahl"
         : pending?.variant === v
-          ? "TAKT →"
+          ? "Takt"
           : v === active
             ? engine.running
-              ? "SPIELT"
+              ? "Spielt"
               : engine.paused
-                ? "PAUSE"
-                : "BEREIT"
+                ? "Pause"
+                : "Auswahl"
             : "";
       el.style.setProperty(
         "--step-progress",
@@ -168,12 +181,16 @@ function refresh() {
   $("#xy-label").textContent =
     session.fx.mode === "gate"
       ? `GATE 1/${session.fx.division}`
-      : session.fx.mode.toUpperCase();
+      : session.fx.mode === "echo"
+        ? "MASTER-ECHO"
+        : session.fx.mode === "flanger"
+          ? "FLANGER"
+          : session.fx.mode.toUpperCase();
   $("#xy-hint").textContent = session.fx.hold
-    ? "HOLD · Position bleibt"
-    : "Ziehen · loslassen = neutral";
+    ? "HOLD hält XY"
+    : "Loslassen: XY neutral";
   $("#gate-label").textContent =
-    `1/${session.fx.division} · tippe für 1/${session.fx.division === 8 ? 16 : 8}`;
+    `1/${session.fx.division} · tippen: 1/${session.fx.division === 8 ? 16 : 8}`;
   $("#xy-dot").style.left = `${14 + session.fx.x * 72}%`;
   $("#xy-dot").style.top = `${14 + (1 - session.fx.depth) * 72}%`;
   $("#xy").setAttribute(
@@ -221,7 +238,7 @@ function panic() {
   panicSession(session);
   syncSliders();
   updateFX();
-  notice("DRY: Effekte neutral. Dein Groove läuft weiter.");
+  notice("FX AUS: Filter und Klangregler neutral; Patterns und Pegel bleiben.");
 }
 $("#play").onclick = () =>
   guarded(async () => {
@@ -270,7 +287,9 @@ for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
   const preview = (e) => {
     const g = ribbonGestures.get(track);
     if (g?.pointerId !== e.pointerId) return;
-    g.variant = ribbonVariant(e.clientX, ribbon.getBoundingClientRect());
+    const rect = ribbon.getBoundingClientRect();
+    g.variant = ribbonVariant(e.clientX, rect);
+    g.cancel = ribbonCancelled(e.clientY, rect);
     refresh();
   };
   ribbon.onpointerdown = (e) => {
@@ -285,12 +304,15 @@ for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
     const g = ribbonGestures.get(track);
     if (g?.pointerId !== e.pointerId) return;
     ribbonGestures.delete(track);
-    if (commit) engine.queue(track, g.variant);
+    if (commit && !g.cancel) engine.queue(track, g.variant);
     if (ribbon.hasPointerCapture(e.pointerId))
       ribbon.releasePointerCapture(e.pointerId);
     refresh();
   };
-  ribbon.onpointerup = (e) => finish(e, true);
+  ribbon.onpointerup = (e) => {
+    preview(e);
+    finish(e, true);
+  };
   ribbon.onpointercancel = (e) => finish(e, false);
   ribbon.onlostpointercapture = (e) => finish(e, false);
   ribbon.onkeydown = (e) => {
@@ -308,6 +330,22 @@ for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
     ribbon.querySelector(`[data-variant="${next}"]`).focus();
   };
 }
+document.addEventListener(
+  "keydown",
+  (e) => {
+    if (e.key !== "Escape" || !ribbonGestures.size) return;
+    e.preventDefault();
+    e.stopPropagation();
+    for (const [track, g] of [...ribbonGestures]) {
+      ribbonGestures.delete(track);
+      const band = $(`[data-ribbon="${track}"]`);
+      if (band.hasPointerCapture(g.pointerId))
+        band.releasePointerCapture(g.pointerId);
+    }
+    refresh();
+  },
+  true,
+);
 const board = $("#special-board");
 function glide(e) {
   const state = glidePointers.get(e.pointerId);
@@ -368,8 +406,6 @@ xy.onpointerup = endPointer;
 xy.onpointercancel = (e) => {
   if (e.pointerId === activePointer) {
     activePointer = null;
-    ribbonGestures.clear();
-    glidePointers.clear();
     session.fx.hold = false;
     release();
   }
@@ -539,8 +575,7 @@ if (import.meta.env.PROD && "serviceWorker" in navigator)
       .register(`${import.meta.env.BASE_URL}sw.js`)
       .then(() => navigator.serviceWorker.ready)
       .then(() => {
-        $("#offline-state").textContent =
-          "Offline bereit · Zum Home-Bildschirm hinzufügen · Nur Vordergrund";
+        $("#offline-state").textContent = "Offline bereit · Vordergrund-Audio";
       })
       .catch(() => {
         $("#offline-state").textContent = "Offline benötigt HTTPS.";

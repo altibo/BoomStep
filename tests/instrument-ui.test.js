@@ -47,3 +47,12 @@ test("strum fires only on field entry, not hold, and re-entry deliberately retri
   }
   assert.equal(count, 4);
 });
+test("intentional vertical cancel has a 24px safety corridor and re-entry re-arms selection", async () => {
+  const { ribbonCancelled } = await import("../src/instrument-ui.js");
+  const r = { top: 100, bottom: 144 };
+  for (const y of [76, 100, 120, 144, 168])
+    assert.equal(ribbonCancelled(y, r), false);
+  for (const y of [75, 169, -20, 900])
+    assert.equal(ribbonCancelled(y, r), true);
+  assert.equal(ribbonCancelled(120, r), false);
+});
