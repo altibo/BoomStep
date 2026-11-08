@@ -13,12 +13,7 @@ test("mobile jam produces nonzero stereo WAV and preserves phase across pause", 
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
-  for (const locator of [
-    ".patterns button",
-    ".mute",
-    ".details",
-    ".transport button",
-  ]) {
+  for (const locator of [".pattern", ".mute", ".solo", ".transport button"]) {
     const sizes = await page.locator(locator).evaluateAll((els) =>
       els.map((e) => ({
         w: e.getBoundingClientRect().width,
@@ -28,21 +23,21 @@ test("mobile jam produces nonzero stereo WAV and preserves phase across pause", 
     expect(sizes.every((s) => s.w >= 44 && s.h >= 44)).toBeTruthy();
   }
   await page.screenshot({
-    path: "test-results/artifacts/implementation-pocket-grid-ready.png",
+    path: "test-results/artifacts/hard-house-ready.png",
     fullPage: true,
   });
   await page.locator("#record").click();
   await expect(page.locator("#record")).toHaveClass(/recording/);
   await page.waitForTimeout(1100);
   await page.locator('[data-track="1"][data-variant="2"]').click();
-  await expect(page.locator("#pending-1")).toContainText("ab Takt");
+  await expect(page.locator("#pending-1")).toContainText(" T");
   await page.screenshot({
-    path: "test-results/artifacts/implementation-pocket-grid-playing.png",
+    path: "test-results/artifacts/hard-house-playing.png",
     fullPage: true,
   });
   await page.locator('[data-mute="2"]').click();
   await expect(page.locator("#track-2")).toHaveClass(/muted/);
-  await page.locator("#master-filter").fill("0.62");
+  await page.locator('[data-key="master"]').fill("0.62");
   await page.waitForTimeout(1600);
   await page.locator("#record").click();
   await expect(page.locator("#download")).toBeVisible();
@@ -75,7 +70,7 @@ test("mobile jam produces nonzero stereo WAV and preserves phase across pause", 
       Array.from(new Uint8Array(await (await fetch(a.href)).arrayBuffer())),
     );
   await writeFile(
-    "test-results/artifacts/test-performance.wav",
+    "test-results/artifacts/hard-house-performance.wav",
     Buffer.from(bytes),
   );
   console.log("Captured actual performance", wav);
@@ -103,7 +98,7 @@ test("mobile jam produces nonzero stereo WAV and preserves phase across pause", 
   ).toBeTruthy();
   expect(await page.evaluate(() => window.boomstep.session.master)).toBe(0.62);
   await page.screenshot({
-    path: "test-results/artifacts/implementation-pocket-grid.png",
+    path: "test-results/artifacts/hard-house.png",
     fullPage: true,
   });
   expect(errors).toEqual([]);
@@ -115,7 +110,7 @@ test("built app loads offline and every package starts", async ({
   await page.goto("/");
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.reload();
-  for (const p of ["1", "2", "0"]) {
+  for (const p of ["1", "2", "3", "4", "5", "0"]) {
     await page.locator("#pack").selectOption(p);
     await page.locator("#play").click();
     await page.waitForTimeout(250);
@@ -128,7 +123,7 @@ test("built app loads offline and every package starts", async ({
   await page.reload();
   await expect(page.locator("h1")).toContainText("BoomStep");
   await page.locator("#play").click();
-  await expect(page.locator("#play")).toContainText("Pause");
+  await expect(page.locator("#play")).toContainText("PAUSE");
 });
 
 test("actual mixer mute/solo, filters, delay and master hall parameters update", async ({
@@ -136,11 +131,11 @@ test("actual mixer mute/solo, filters, delay and master hall parameters update",
 }) => {
   await page.goto("/");
   await page.locator("#play").click();
-  await page.locator('[data-detail="1"]').click();
-  await page.locator('[data-mix="volume"]').fill("0.35");
-  await page.locator('[data-mix="filter"]').fill("0.4");
-  await page.locator('[data-mix="delay"]').fill("0.5");
-  await page.locator("#solo").click();
+
+  await page.locator('[data-strip="1"][data-key="volume"]').fill("0.35");
+  await page.locator('[data-strip="1"][data-key="filter"]').fill("0.4");
+  await page.locator('[data-strip="1"][data-key="delay"]').fill("0.5");
+  await page.locator('[data-solo="1"]').click();
   await page.waitForTimeout(250);
   const mix = await page.evaluate(() => ({
     gain: window.boomstep.engine.strips.map((s) => s.gain.gain.value),
@@ -151,16 +146,11 @@ test("actual mixer mute/solo, filters, delay and master hall parameters update",
   expect(mix.gain[1]).toBeCloseTo(0.35, 2);
   expect(mix.filter).toBeLessThan(2000);
   expect(mix.delay).toBeCloseTo(0.275, 2);
-  await page
-    .getByRole("button", { name: "Schließen", exact: true })
-    .first()
-    .click();
-  await page.locator("#mix").click();
-  await page.locator('[data-mix="reverb"]').fill("0.5");
+  await page.locator('[data-key="reverb"]').fill("0.5");
   await page.waitForTimeout(250);
   expect(
     await page.evaluate(() => window.boomstep.engine.wet.gain.value),
-  ).toBeCloseTo(0.3, 2);
+  ).toBeCloseTo(0.325, 2);
 });
 
 test("narrow phone controls remain touch-safe without horizontal overflow", async ({
@@ -173,12 +163,7 @@ test("narrow phone controls remain touch-safe without horizontal overflow", asyn
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBeTruthy();
-  for (const selector of [
-    ".patterns button",
-    ".mute",
-    ".details",
-    ".transport button",
-  ])
+  for (const selector of [".pattern", ".mute", ".solo", ".transport button"])
     expect(
       await page
         .locator(selector)

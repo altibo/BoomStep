@@ -1,25 +1,21 @@
-# Bereitstellung (bewusst noch nicht aktiviert)
+# GitHub Pages
 
-Der veröffentlichbare Inhalt entsteht mit `npm ci && npm run build` in `dist/`. Den **Inhalt** dieses Verzeichnisses auf einen genehmigten statischen HTTPS-Host hochladen. Unterstützt Root-Pfad oder einen Unterordner; keine Rewrite-Regeln oder Backend-Routen nötig. `manifest.webmanifest` sollte als JSON/Manifest, `.js` als JavaScript ausgeliefert werden. Service Worker benötigt denselben Origin und den App-Pfad als Scope.
+Live: **https://altibo.github.io/BoomStep/**
 
-## Warum noch kein öffentlicher Link?
+Das Repository ist nach ausdrücklicher Freigabe öffentlich. GitHub Pages verwendet **gh-pages**, Pfad **/**, HTTPS erzwungen und GitHubs eigenen Pages-Build (`legacy` / branch source). Kein zusätzlicher Anbieter oder kostenpflichtiger Dienst.
 
-`altibo/BoomStep` ist privat, war leer und hat `has_pages: false`. Kein existierendes Deployment, keine Vorschau-URL und keine vorherige Website wurden gefunden. Das Repository wurde nicht öffentlich gemacht, Pages nicht aktiviert, nicht gemergt und kein Hostingvertrag abgeschlossen. Eine lokale Vorschau ist kein öffentlich erreichbarer Handy-Link.
+## Aktualisieren
 
-Vor dem Veröffentlichen ist eine konkrete Freigabe nötig:
+1. Featurebranch vom aktuellen main anlegen, Quellcode testen und als PR bereitstellen. Kein automatischer Main-Merge.
+2. `npm ci && npm test && npm run lint && npm run build && npm run test:browser`.
+3. `dist/` prüfen: nur index.html, gehashte JS/CSS, Manifest, Icons, recorder.js und sw.js. Keine Source Maps, Zugangsdaten oder Entwicklungsdateien.
+4. Im separaten gh-pages-Worktree aktuellen Remote-Stand vorwärts holen. Nur den geprüften `dist/`-Inhalt plus `.nojekyll` als normalen neuen Commit veröffentlichen. **Kein Forcepush und kein History-Rewrite.** Vorherige Deploycommits bleiben erhalten.
+5. Pages-API-/Actions-Status bis erfolgreich prüfen. Tatsächliche `html_url` verwenden, HTTPS200 für Index und sämtliche Assets einschließlich Worklet/Serviceworker prüfen. Öffentliche Browser-Smokes gegen den `/BoomStep/`-Unterpfad ausführen.
 
-1. Soll die App öffentlich unter einem HTTPS-Link erreichbar sein, obwohl der Quellcode privat bleibt?
-2. Welcher vorhandene Host darf dafür verwendet werden? GitHub Pages für ein privates Repository hängt von Tarif/Organisation ab; Verfügbarkeit und ggf. öffentliche Sichtbarkeit zuerst prüfen. Keine Sichtbarkeitsänderung oder Tarifbuchung ohne Zustimmung.
-3. Pull Request prüfen/mergen und die hier gebauten Assets dort bereitstellen. Ein Merge allein reicht ohne Hosting nicht.
+Relative Vite-Basis `./` und relativer Manifest-/Serviceworker-Scope unterstützen den Projekt-Unterpfad. Der Serviceworker bekommt je Produktionsbuild eine neue Hash-Version. Ein bereits offener alter App-Tab kann den alten Worker noch halten; zum vollständigen Update Tabs schließen und neu öffnen. Offlinebetrieb erst nach vollständigem Download des neuen Builds prüfen.
 
-Der angemeldete GitHub-CLI-Zugang besitzt `repo`, aber **nicht** `workflow`. Deshalb wird kein `.github/workflows`-Schreibversuch unternommen, keine Berechtigung erweitert und kein automatisch deployender Workflow aktiviert. Die vorhandenen npm-Befehle reichen für den Build und jeden statischen Host. CI oder ein Pages-Workflow kann nach entsprechender Freigabe und Berechtigungswahl ergänzt werden.
+Der angemeldete CLI-Zugang braucht kein erweitertes Workflow-Scope: die App wird fertig gebaut auf gh-pages gepusht, kein eigener `.github/workflows`-Schreibzugriff nötig. Ein lokaler Vorschau-Link ist kein öffentlicher Handy-Link. Keine Veröffentlichung über andere Dienste oder Sichtbarkeitsänderungen ohne Freigabe.
 
-## Abnahme nach Veröffentlichung
+## Echte Geräteabnahme
 
-- Vollständigen HTTPS-Link auf iPhone/Safari und Android/Chrome öffnen; nicht `file://` verwenden.
-- Nach einmaligem Laden Flugmodus: neu öffnen und alle Pakete spielen.
-- Kopfhörer: vier Spuren, Taktwechsel während Takt 2/3, keine Akkord-Neustarts.
-- Mute/Solo/Filter/Delay/Hall und Pause/Resume prüfen.
-- 10 Sekunden Performance aufnehmen, WAV herunterladen und in anderer Audio-App anhören.
-- Session exportieren/importieren und zum Home-Bildschirm hinzufügen.
-- Appwechsel/Displaysperre: Unterbrechung erwartet, bewusstes Fortsetzen per Spielen.
+Auf iPhone/Safari und Android/Chrome: Ton, Offbeat-Kick/Bass, schnelle Patternwechsel über Takt 2/3, Vordergrund-Pause/Resume, XY-Hold/Release/DRY, WAV samt FX in anderer Audio-App anhören, Sessionimport und Offline-Start prüfen. Browser-Schriftvergrößerung und Browserleisten können die benötigte Bildschirmhöhe ändern. Die automatisierte Chromium-Abnahme ist kein behaupteter iPhone-Hörtest.
