@@ -1,0 +1,33 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { Engine } from "../src/engine.js";
+import { initialSession } from "../src/music.js";
+test("lookahead schedules on AudioContext time, never timer callback time", () => {
+  const e = new Engine(initialSession());
+  e.ctx = { currentTime: 1 };
+  e.nextTime = 1.06;
+  e.strips = Array.from({ length: 4 }, () => ({ filter: {} }));
+  const scheduled = [];
+  e.note = (event, time) => scheduled.push(time);
+  e.pump();
+  assert.equal(e.clock.step, 1);
+  assert.ok(scheduled.every((t) => t === 1.06));
+  e.ctx.currentTime = 1.11;
+  e.pump();
+  assert.equal(e.clock.step, 2);
+  assert.ok(Math.abs(e.timeline[1].time - 1.185) < 1e-9);
+});
+test("late timer skips stale steps with phase retained and queued changes applied", () => {
+  const e = new Engine(initialSession());
+  e.ctx = { currentTime: 5 };
+  e.nextTime = 0;
+  e.strips = Array.from({ length: 4 }, () => ({ filter: {} }));
+  e.note = () => {};
+  e.clock.step = 1;
+  e.clock.queue(1, 2, true);
+  e.pump();
+  assert.equal(e.session.tracks[1].variant, 2);
+  assert.equal(e.clock.pending.size, 0);
+  assert.equal(e.timeline[0].time, 5);
+  assert.equal(e.timeline[0].step, 41);
+});
