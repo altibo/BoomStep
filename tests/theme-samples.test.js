@@ -10,7 +10,8 @@ import {
   INSTRUMENTS,
   SAMPLE_FILES,
 } from "../src/samples.js";
-import { swipeSteps } from "../src/instrument-ui.js";
+import { songTapStep } from "../src/instrument-ui.js";
+import { wrapSong } from "../src/songs.js";
 import {
   contrast,
   luminance,
@@ -65,16 +66,20 @@ test("song colours are bright, never pure amber (pending) or red (recording)", (
     assert.ok(hueGap(h, red) >= 25, `${song.name} vs red ${h}`);
   }
 });
-test("swipe distance maps to song steps with a dead zone and both directions", () => {
-  assert.equal(swipeSteps(0), 0);
-  assert.equal(swipeSteps(27), 0);
-  assert.equal(swipeSteps(-27), 0);
-  assert.equal(swipeSteps(28), 1);
-  assert.equal(swipeSteps(-28), -1);
-  assert.equal(swipeSteps(91), 1);
-  assert.equal(swipeSteps(92), 2);
-  assert.equal(swipeSteps(-160), -3);
-  assert.equal(swipeSteps(5000), 9);
+test("song field tap: left half = previous, right half = next, repeated taps count on and wrap", () => {
+  const rect = { left: 10, width: 120 };
+  assert.equal(songTapStep(10, rect), -1);
+  assert.equal(songTapStep(69.9, rect), -1);
+  assert.equal(songTapStep(70, rect), 1);
+  assert.equal(songTapStep(129, rect), 1);
+  // Repeated taps from the pending target: 0 → 1 → 2, and 0 ← wraps to 9.
+  let target = 0;
+  for (const x of [100, 100]) target = wrapSong(target + songTapStep(x, rect));
+  assert.equal(target, 2);
+  for (const x of [20, 20, 20])
+    target = wrapSong(target + songTapStep(x, rect));
+  assert.equal(target, 9);
+  assert.equal(wrapSong(9 + songTapStep(120, rect)), 0);
 });
 test("sample bank: every file exists with matching hash, all used instruments are present, budget < 15 MB", () => {
   let bytes = 0;
