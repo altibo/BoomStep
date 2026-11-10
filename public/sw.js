@@ -1,3 +1,4 @@
+/* global __SAMPLES__ */
 const PREFIX = `boomstep:${self.registration.scope}:`;
 const CACHE = `${PREFIX}__BUILD_ID__`;
 self.addEventListener("install", (event) => {
@@ -12,6 +13,8 @@ self.addEventListener("install", (event) => {
           "./icon-192.png",
           "./icon-512.png",
           "./recorder.js",
+          "./samples/CREDITS.txt",
+          ...__SAMPLES__,
         ].map((p) => new URL(p, base).href),
       );
       const response = await cache.match(base.href);
