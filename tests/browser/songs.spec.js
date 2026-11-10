@@ -31,7 +31,6 @@ test("all performance controls are inline; portrait layouts are visible and touc
       ".solo",
       ".fx-pads button",
       ".transport button",
-      ".special-pad",
       "#all-songs",
     ]) {
       const sizes = await page.locator(sel).evaluateAll((es) =>
@@ -141,8 +140,9 @@ test("old V1 and V3 local sessions migrate to V4 songs, keeping mix, mute and pa
   );
   await page.locator("#load").click();
   const s = await page.evaluate(() => window.boomstep.session);
-  expect(s.version).toBe(4);
+  expect(s.version).toBe(5);
   expect(s.pack).toBeUndefined();
+  expect(s.specialLevel).toBeUndefined();
   expect(s.master).toBe(0.72);
   expect(s.tracks.map((t) => t.variant)).toEqual([0, 1, 2, 3]);
   expect(s.tracks[2].mute).toBe(true);

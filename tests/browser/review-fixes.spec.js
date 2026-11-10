@@ -131,7 +131,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     }
     const clipped = await page
       .locator(
-        ".mini span,.song-cue,.special-pad,.fx-pads button,#interaction-status,#orbit-status",
+        ".mini span,.song-cue,.fx-pads button,#interaction-status,#orbit-status",
       )
       .evaluateAll((es) =>
         es
@@ -224,7 +224,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
   await expect(
     page.locator('[data-strip="0"][data-key="delay"]').locator(".."),
   ).toContainText("SPUR-ECHO");
-  await expect(page.locator('[data-fx="echo"]')).toContainText("MASTER-ECHO");
+  await expect(page.locator('[data-fx="echo"]')).toContainText("M-ECHO");
   await expect(page.locator("#panic")).toHaveText("FX AUS");
   await page.locator("#panic").click();
   expect(
@@ -252,7 +252,7 @@ test("R3 all musical targets have real 44px bounds and fit above 840px on 390x84
   await page.goto("/");
   const geometry = await page
     .locator(
-      ".variant-slider,.song-step,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs",
+      ".variant-slider,.song-step,.mute,.solo,.fx-pads button,.transport button,input[data-key],#xy,#all-songs",
     )
     .evaluateAll((es) =>
       es.map((e) => {
@@ -279,10 +279,13 @@ test("R3 all musical targets have real 44px bounds and fit above 840px on 390x84
   }
   expect(await page.locator(".track-status").count()).toBe(0);
   expect(await page.locator(".master input").count()).toBe(4);
-  expect(await page.locator("[data-key=specialLevel]").count()).toBe(1);
+  // one-shot specials and their level fader are gone (4.3)
+  expect(
+    await page.locator("[data-key=specialLevel], [data-special]").count(),
+  ).toBe(0);
 });
 
-test("320px long cancel and recording status wrap without overflow or covering the specials", async ({
+test("320px long cancel and recording status wrap without overflow or covering the transport", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 320, height: 568 });
@@ -297,7 +300,7 @@ test("320px long cancel and recording status wrap without overflow or covering t
       const e = document.querySelector("#interaction-status"),
         p = document.querySelector("#orbit-status"),
         a = e.getBoundingClientRect(),
-        b = document.querySelector(".specials-caption").getBoundingClientRect();
+        b = document.querySelector(".transport").getBoundingClientRect();
       return {
         overflow: document.documentElement.scrollWidth > innerWidth,
         clipped:

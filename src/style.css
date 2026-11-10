@@ -986,8 +986,8 @@ header {
     justify-items: center;
     text-align: center;
   }
-  #interaction-status {
-    -webkit-line-clamp: 1;
+  .mini span {
+    letter-spacing: -0.45px;
   }
 }
 @media (min-width: 760px) and (orientation: portrait) {
@@ -1091,7 +1091,7 @@ header {
     grid-template-rows: 14px minmax(120px, 1fr) 14px;
     /* thumb corner, but ≥ 28px from the right and bottom screen edge (safe area added
        by main padding) and 8px air towards the FX keys above */
-    margin: 4px 22px 8px 0;
+    margin: 0 23px 12px 0;
   }
   #notice:not(:empty) {
     position: fixed;

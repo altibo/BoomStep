@@ -226,7 +226,7 @@ test("Solo-aus labels remain unclipped and layout unchanged at 390px and 320px",
       })),
     }));
     expect(result.overflow).toBe(false);
-    expect(result.bottom).toBe(width === 390 ? 822 : 872);
+    expect(result.bottom).toBe(804);
     expect(result.labels.map((x) => x.text)).toEqual([
       "Solo-aus",
       "Auswahl",
