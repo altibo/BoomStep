@@ -5,7 +5,7 @@ test.beforeEach(async () => mkdir(out, { recursive: true }));
 const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 async function move(page, selector) {
   await page.locator(selector).evaluate((el) =>
-    (el.closest(".specials") || el.closest(".track") || el).scrollIntoView({
+    (el.closest(".track") || el).scrollIntoView({
       block: "center",
     }),
   );
@@ -80,81 +80,6 @@ test("ribbon keyboard is discrete and accessible; lost capture discards a previe
   ).toBe(3);
   await expect(page.locator(".scrub-preview")).toHaveCount(0);
 });
-test("strum triggers once per boundary, re-entry retriggers, hold/cancel never auto-repeat or start loop", async ({
-  page,
-}) => {
-  await page.goto("/");
-  await move(page, '[data-special="bark"]');
-  await page.mouse.down();
-  await move(page, '[data-special="bass"]');
-  await move(page, '[data-special="fill"]');
-  await move(page, '[data-special="bass"]');
-  await expect
-    .poll(() => page.evaluate(() => window.boomstep.engine.specialTriggerCount))
-    .toBe(4);
-  await page.waitForTimeout(250);
-  expect(
-    await page.evaluate(() => window.boomstep.engine.specialTriggerCount),
-  ).toBe(4);
-  await page
-    .locator("#special-board")
-    .dispatchEvent("pointercancel", { pointerId: 1 });
-  await move(page, '[data-special="bark"]');
-  await page.mouse.up();
-  expect(
-    await page.evaluate(() => ({
-      count: window.boomstep.engine.specialTriggerCount,
-      running: window.boomstep.engine.running,
-      step: window.boomstep.engine.clock.step,
-    })),
-  ).toEqual({ count: 4, running: false, step: 0 });
-  await page.waitForFunction(
-    () => window.boomstep.engine.specialGroups.length === 0,
-  );
-});
-test("two simultaneous touch fingers have independent strum histories", async ({
-  page,
-  context,
-}) => {
-  await page.goto("/");
-  const cdp = await context.newCDPSession(page);
-  await cdp.send("Emulation.setTouchEmulationEnabled", {
-    enabled: true,
-    maxTouchPoints: 5,
-  });
-  await page.locator("#special-board").scrollIntoViewIfNeeded();
-  const coords = [];
-  for (const id of ["bark", "bass", "fill"])
-    coords.push(
-      center(await page.locator(`[data-special="${id}"]`).boundingBox()),
-    );
-  const touches = (a, b) => [
-    { id: 1, ...a },
-    { id: 2, ...b },
-  ];
-  await cdp.send("Input.dispatchTouchEvent", {
-    type: "touchStart",
-    touchPoints: touches(coords[0], coords[2]),
-  });
-  await expect
-    .poll(() => page.evaluate(() => window.boomstep.engine.specialTriggerCount))
-    .toBe(2);
-  await cdp.send("Input.dispatchTouchEvent", {
-    type: "touchMove",
-    touchPoints: touches(coords[1], coords[2]),
-  });
-  await expect
-    .poll(() => page.evaluate(() => window.boomstep.engine.specialTriggerCount))
-    .toBe(3);
-  await cdp.send("Input.dispatchTouchEvent", {
-    type: "touchEnd",
-    touchPoints: [],
-  });
-  await page.waitForTimeout(150);
-  expect(
-    await page.evaluate(() => window.boomstep.engine.specialTriggerCount),
-  ).toBe(3);
-});
 test("orbit and pending marker follow actual shared clock and freeze on pause", async ({
   page,
 }) => {
@@ -176,38 +101,29 @@ test("orbit and pending marker follow actual shared clock and freeze on pause", 
   await page.waitForTimeout(200);
   expect(await page.locator("#orbit-head").getAttribute("cx")).toBe(frozen);
 });
-test("new strum gestures and held FX really reach post-master stereo WAV", async ({
+test("live REC with held STUTTER reaches the post-master stereo WAV, bounded", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.evaluate(() =>
-    window.boomstep.session.tracks.forEach((t) => (t.mute = true)),
-  );
   await page.locator("#record").click();
   await page.waitForFunction(
     () => window.boomstep.engine.recordedFrames > 24000,
   );
   await page.locator("#hold").click();
-  await page.locator('[data-fx="drive"]').click();
+  await page.locator('[data-fx="stutter"]').click();
+  await expect(page.locator('[data-fx="stutter"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   await page.locator("#xy").scrollIntoViewIfNeeded();
   const xy = await page.locator("#xy").boundingBox();
-  await page.mouse.click(xy.x + xy.width * 0.5, xy.y + xy.height * 0.2);
-  for (const [i, id] of [
-    "bark",
-    "bass",
-    "fill",
-    "laser",
-    "impact",
-    "rise",
-  ].entries()) {
-    await move(page, `[data-special="${id}"]`);
-    if (i === 0) await page.mouse.down();
-  }
-  await page.mouse.up();
-  await expect
-    .poll(() => page.evaluate(() => window.boomstep.engine.specialTriggerCount))
-    .toBe(6);
+  await page.mouse.click(xy.x + xy.width * 0.5, xy.y + xy.height * 0.1);
+  await expect(page.locator("#xy-axis")).toContainText("1/16");
+  const before = await page.evaluate(() => window.boomstep.engine.stutterCount);
   await page.waitForTimeout(1500);
+  expect(
+    await page.evaluate(() => window.boomstep.engine.stutterCount),
+  ).toBeGreaterThan(before + 1);
   await page.locator("#record").click();
   await expect(page.locator("#download")).toBeVisible();
   const m = await page.locator("#download").evaluate(async (a) => {
@@ -225,19 +141,19 @@ test("new strum gestures and held FX really reach post-master stereo WAV", async
       channels: v.getUint16(22, true),
     };
   });
-  console.log("Real strum recording", m);
+  console.log("Live stutter recording", m);
   expect(m.channels).toBe(2);
   expect(m.rms).toBeGreaterThan(0.001);
   expect(m.peak).toBeLessThan(0.95);
   await page.screenshot({
-    path: `${out}/orbit-recording-fx.png`,
+    path: `${out}/orbit-recording-stutter.png`,
     fullPage: true,
   });
   const [d] = await Promise.all([
     page.waitForEvent("download"),
     page.locator("#download").click(),
   ]);
-  await d.saveAs(`${out}/orbit-strum-live.wav`);
+  await d.saveAs(`${out}/stutter-live.wav`);
 });
 test("orbit deck layout preserves all direct controls, primary targets and no overflow", async ({
   page,
@@ -250,7 +166,7 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
     await page.setViewportSize({ width, height });
     await page.goto("/");
     expect(await page.locator("dialog").count()).toBe(0);
-    expect(await page.locator("input[data-key]").count()).toBe(17);
+    expect(await page.locator("input[data-key]").count()).toBe(16);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -263,7 +179,7 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
     else expect(box.y + box.height).toBeGreaterThan(height);
     const bad = await page
       .locator(
-        ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",
+        ".variant-slider,.song-step,.mute,.solo,.fx-pads button,.transport button,input[data-key],#xy",
       )
       .evaluateAll((es) =>
         es

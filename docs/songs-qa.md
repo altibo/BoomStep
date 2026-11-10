@@ -1,16 +1,31 @@
-# Dark Bounce 4.0 · lokaler Messbericht
+# Dark Bounce 4.3 · lokaler Messbericht
 
 Automatisiert in Linux-Chromium (Playwright), lokaler Produktionsbuild. **Keine Hörabnahme, kein Safari/Echtgerät.**
 
 ## Layout (CSS-px, echte DOM-Bounds)
 
-| Viewport | Musikbereich unten | Songfeld | Pattern-Regler | min. Font | Überlauf |
-|---|---:|---|---|---:|---|
-| 390×844 | 822 | 100×44 | 172×44 | 11px | keiner |
-| 390×700 | 822 (Scroll) | 100×44 | 172×44 | 11px | keiner |
-| 320×568 | 872 (Scroll) | 92×44 | 110×44 | 11px | keiner |
+| Viewport | Musikbereich unten | XY (x,y · B×H) | min. Font | Überlauf |
+|---|---:|---|---:|---|
+| 390×844 | 804 | 198,580 · 184×160 | 11px | keiner |
+| 390×700 | 804 (Scroll) | 198,580 · 184×160 | 11px | keiner |
+| 320×568 | 804 (Scroll) | 162,580 · 150×160 | 11px | keiner |
 
-Songnamen ohne Abschneiden (scrollWidth = clientWidth). 53 direkte musikalische Trefferflächen ≥ 44×44.
+Hochformat: Kopfzeile (ALLE AUF SONG…, Krassheit, Licht), 4 Spuren, Masterzeile, FX-Kacheln 4-spaltig (STUTTER doppelt breit), Takt-Anzeige links neben XY, darunter PLAY/REC/Stop | HOLD/FX AUS.
+
+### Querformat (Hauptlayout, 3 Spalten)
+
+| Viewport | Musik unten | Links (global) | Spurblock mittig | Rechts (FX/XY) | FX-Raster | XY (x,y · B×H) | Abstand XY rechts/unten |
+|---|---:|---|---|---|---|---|---|
+| 844×390 | 386 | x 6–233 | x 239–605 (Mitte 422 = w/2) | x 611–838 | 4 Sp. | 611,164 · 204×194 | 29 / 32 |
+| 932×430 | 426 | x 6–258 | x 264–669 (466,5 = w/2) | x 674–926 | 4 Sp. | 674,164 · 229×234 | 29 / 32 |
+| 740×360 | 359 | x 6–206 | x 210–530 (370 = w/2) | x 534–734 | 3 Sp. | 534,209 · 177×122 | 29 / 29 |
+| 667×375 | 371 | x 6–173 | x 179–489 (334 ≈ w/2) | x 495–662 | 3 Sp. | 495,212 · 144×131 | 28 / 32 |
+
+Links von oben: Takt-Anzeige (Ring 88 px, Ziffern 11 px, „Takt x/8“ 17 px, Akkord/REC 12 px, Meldung 12 px), Menü + Licht + Krassheit (92 px), M-FILTER/HALL/DRIVE/PUMP 2×2 (92 px), PLAY/REC/Stop unten (44 px). Rechts: FX-Kacheln (STUTTER volle bzw. doppelte Breite), HOLD/FX AUS, Achsenzeile, XY, Hinweis.
+
+Geprüft je Viewport (`landscape.spec.js`): alle Controls im Viewport und ≥ 44×44, Spurteile überlappen nicht, Spurblock horizontal zentriert (±3 % Breite), linke Blöcke rechts begrenzt durch Spurblock, rechte Blöcke links davon begrenzt, jeweils paarweise überlappungsfrei; Takt-Anzeige oben links (≤ 8/12 px), Ring ≥ 84 px, Taktschrift ≥ 16 px; Transport unten links; XY ≥ 120×120, Mittelpunkt im rechten unteren Quadranten, 28–40 px vom rechten und 28–44 px vom unteren Rand, ≥ 8 px Luft zu HOLD/FX AUS; kein Text-Clipping, kein horizontaler Überlauf, min. Font 11 px. Safe-Area-Ränder (`env(safe-area-inset-*)`) sind gesetzt, in Chromium nicht emulierbar und daher ungetestet.
+
+Songnamen ohne Abschneiden und ohne Überdeckung durch ‹ › (alle 10 Namen in allen Breiten gemessen). 50 direkte musikalische Trefferflächen ≥ 44×44 (8 Song-Tasten, 4 Pattern-Regler, 8 Stumm/Solo, 7 FX-Kacheln, 3 Transport, 16 Fader, XY, Menü, Krassheit, Licht).
 
 ## Kontrast je Song (gemessen aus berechneten Styles, WCAG)
 
@@ -36,11 +51,25 @@ Zusätzlich (Node, `src/theme.js` spiegelt die CSS-Mischungen): alle Flächen au
 | alt 073bdf3, 7 Pakete × 8 Takte (Mittel) | 0.184 | 0.739 | 0 | 3646 Hz |
 | neu, 10 Songs × 8 Takte (Mittel) | 0.184 | 0.730 | 0 | 2266 Hz |
 | Mix 2 Songs (Tiefgarage/Giftgarten) | 0.240 | 0.774 | 0 | 2580 Hz |
-| Mix 4 Songs + Wechsel + 3 Specials | 0.182 | 0.821 | 0 | 2174 Hz (1. Hälfte 2346 / 2. Hälfte 2032) |
-| Max. Krassheit + Drive + 6 Specials | 0.422 | 0.848 | 0 | 3095 Hz |
-| Live-REC mit 2 gewischten Songwechseln (5,6 s) | 0.174 | 0.724 | 0 | 2168 Hz |
+| Mix 4 Songs + Wechsel + Stutter/Crush/Tape | 0.183 | 0.706 | 0 | 2069 Hz (1. Hälfte 1860 / 2. Hälfte 2387) |
+| Max. Krassheit + Drive + Stutter 1/32/Crush 2 Bit/Tape | 0.376 | 0.844 | 0 | 2754 Hz |
+| Live-REC quer 844×390 mit 2 getippten Songwechseln (5,6 s) | 0.174 | 0.724 | 0 | 2168 Hz |
 
-Pattern-Varianten: kleinste relative RMS-Differenz zur Grundvariante über 160 Renders 0.073 (Schwelle 0.05). Oberflächenfarbe: Akzente (`--theme`) wechseln sofort, nur `--theme-bg` blendet 0,4 s; Tests prüfen Root-Variablen und Krassheit-/Master-Regler, Orbit-Kopf, FX-Kachel, Hintergrund nach Vorschau, Vormerkung, Abbruch, Escape – identisch mit Reduced Motion, nie amberähnlich.
+Pattern-Varianten: kleinste relative RMS-Differenz zur Grundvariante über 160 Renders 0.073 (Schwelle 0.05). Oberflächenfarbe: Akzente (`--theme`) wechseln sofort, nur `--theme-bg` blendet 0,4 s; Tests prüfen Root-Variablen und Krassheit-/Master-Regler, Orbit-Kopf, FX-Kachel, Hintergrund nach Tippen, Vormerkung und Rücknahme, im Hoch- und Querformat – identisch mit Reduced Motion, nie amberähnlich.
+
+### XY-Effekte (4,2 s, Tiefgarage/Giftgarten, `mixes.spec.js`)
+
+| Messung | Ergebnis |
+|---|---|
+| STUTTER 1/16: Korrelation aufeinanderfolgender Wiederholungen (Schläge 2–8) | 0.999 (trocken an gleicher Stelle 0.614) |
+| STUTTER 1/32: dito | 0.973 (trocken −0.884) |
+| Zwei identische Renders, max. Abweichung | 1.4·10⁻⁴ (Float-Rauschen Offline-Graph) |
+| TAPE-STOP ab 1,0 s: RMS vor / nach Stillstand relativ zu trocken | 1.00 / 0.00 |
+| CRUSH 2 Bit: Spektralschwerpunkt | 4949 Hz (trocken 2608 Hz) |
+| Peaks Stutter / Crush / Tape | 0.780 / 0.797 / 0.774, 0 geclippte Samples |
+| Live-REC mit gehaltenem STUTTER (Browser, ~2,3 s) | RMS 0.241, Peak 0.725, Stereo |
+
+Erste Version mit Rückkopplungs-Delay driftete um 128 Samples je Wiederholung (Render-Quantum in Web-Audio-Zyklen, Korrelation 0.49); ersetzt durch sieben getaktete Abgriffe ohne Schleife.
 
 Pitch-Verschiebung je gespielter Note max. ±3 Halbtöne (Hang ±2).
 

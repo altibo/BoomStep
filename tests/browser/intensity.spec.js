@@ -29,7 +29,7 @@ test("large macro stays direct and readable at 0/50/100 without adding viewport 
         ),
         targets: [
           ...document.querySelectorAll(
-            ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs,#intensity,#light-mode",
+            ".variant-slider,.song-step,.mute,.solo,.fx-pads button,.transport button,input[data-key],#xy,#all-songs,#intensity,#light-mode",
           ),
         ].map((e) => {
           const b = e.getBoundingClientRect();
@@ -45,8 +45,9 @@ test("large macro stays direct and readable at 0/50/100 without adding viewport 
       }));
       expect(m.overflow).toBe(false);
       expect(m.clipped).toBe(false);
-      expect(m.targets).toHaveLength(53);
-      expect(m.bottom).toBe(width === 390 ? 822 : 872);
+      // 4 ribbons, 8 song keys, 8 mute/solo, 7 FX tiles, 3 transport, 16 faders, XY, menu, Krassheit, Licht
+      expect(m.targets).toHaveLength(50);
+      expect(m.bottom).toBe(804);
       for (const b of m.targets) {
         expect(b.w).toBeGreaterThanOrEqual(44);
         expect(b.h).toBeGreaterThanOrEqual(44);
@@ -190,12 +191,6 @@ test("audio-time lights stop on pause, quiet and reduced-motion; no idle timer o
     "data-light-pulse",
     "0",
   );
-  const pad = page.locator('[data-special="laser"]'),
-    bg = await pad.evaluate((e) => getComputedStyle(e).backgroundColor);
-  await pad.click();
-  expect(await pad.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(
-    bg,
-  );
   await page.screenshot({ path: `${out}/reduced-motion-100.png` });
   await page.locator("#stop").click();
   await page.waitForTimeout(700);
@@ -217,7 +212,7 @@ test("audio-time lights stop on pause, quiet and reduced-motion; no idle timer o
   );
   expect(n).toBe(0);
 });
-test("0/50/100 alter spectral/wave shape beyond gain; max plus six specials is bounded; 24s sweep WAV", async ({
+test("0/50/100 alter spectral/wave shape beyond gain; max plus stutter/tape/crush is bounded; 24s sweep WAV", async ({
   page,
 }) => {
   test.setTimeout(120000);
@@ -258,10 +253,12 @@ test("0/50/100 alter spectral/wave shape beyond gain; max plus six specials is b
       intensity: 1,
       mode: "drive",
       depth: 1,
-      seconds: 3,
-      specials: ["bark", "bass", "fill", "rise", "impact", "laser"].map(
-        (id) => ({ id, time: 0.5 }),
-      ),
+      seconds: 4,
+      fxSweep: [
+        { time: 0.5, mode: "stutter", x: 1, depth: 1 },
+        { time: 1.5, mode: "crush", x: 1, depth: 1 },
+        { time: 2.5, mode: "tape", x: 0, depth: 1 },
+      ],
     });
     return {
       metrics,
@@ -293,9 +290,14 @@ test("0/50/100 alter spectral/wave shape beyond gain; max plus six specials is b
             { time: 14, value: 1 },
             { time: 21, value: 0 },
           ],
-          specials: ["bark", "bass", "fill", "rise", "impact", "laser"].map(
-            (id, i) => ({ id, time: 2 + 3 * i }),
-          ),
+          fxSweep: [
+            { time: 3, mode: "stutter", x: 0.5, depth: 1 },
+            { time: 5, depth: 0 },
+            { time: 9, mode: "crush", x: 0.8, depth: 1 },
+            { time: 11, depth: 0 },
+            { time: 15, mode: "tape", x: 0.2, depth: 1 },
+            { time: 17, depth: 0 },
+          ],
         }),
       ),
     ),
@@ -325,7 +327,6 @@ test("live macro movement is captured in actual post-master stereo WAV", async (
       window.boomstep.engine.recordedFrames >
       window.boomstep.engine.ctx.sampleRate * 1.8,
   );
-  await page.locator('[data-special="impact"]').click();
   await page.locator("#intensity").fill("0");
   await page.waitForFunction(
     () =>

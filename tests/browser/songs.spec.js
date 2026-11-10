@@ -25,13 +25,12 @@ test("all performance controls are inline; portrait layouts are visible and touc
       ),
     ).toBeTruthy();
     for (const sel of [
-      ".song-swipe",
+      ".song-step",
       ".variant-slider",
       ".mute",
       ".solo",
       ".fx-pads button",
       ".transport button",
-      ".special-pad",
       "#all-songs",
     ]) {
       const sizes = await page.locator(sel).evaluateAll((es) =>
@@ -47,6 +46,9 @@ test("all performance controls are inline; portrait layouts are visible and touc
     console.log("Performance layout", width, height, bounds);
     if (width === 390 && height === 844)
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(822);
+    // landscape is the main layout now: every musical control on the first screen
+    else if (width > height)
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
     else expect(bounds.y + bounds.height).toBeGreaterThan(height);
     await page.screenshot({
       path: `test-results/artifacts/songs-${width}x${height}.png`,
@@ -138,8 +140,9 @@ test("old V1 and V3 local sessions migrate to V4 songs, keeping mix, mute and pa
   );
   await page.locator("#load").click();
   const s = await page.evaluate(() => window.boomstep.session);
-  expect(s.version).toBe(4);
+  expect(s.version).toBe(5);
   expect(s.pack).toBeUndefined();
+  expect(s.specialLevel).toBeUndefined();
   expect(s.master).toBe(0.72);
   expect(s.tracks.map((t) => t.variant)).toEqual([0, 1, 2, 3]);
   expect(s.tracks[2].mute).toBe(true);

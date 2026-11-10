@@ -22,16 +22,7 @@ export function orbitPoint(progress, radius = 69) {
   const a = progress * Math.PI * 2 - Math.PI / 2;
   return { x: 80 + Math.cos(a) * radius, y: 80 + Math.sin(a) * radius };
 }
-export function glideEntry(previous, current) {
-  return { current, trigger: current !== null && previous !== current };
-}
 // Deliberate escape corridor; horizontal drags still clamp to first/last choice.
 export function ribbonCancelled(y, rect, margin = 24) {
   return y < rect.top - margin || y > rect.bottom + margin;
-}
-// Horizontal song swipe: 28px dead zone, then one song per further 64px (max nine, circular list).
-export function swipeSteps(dx, threshold = 28, per = 64) {
-  const a = Math.abs(dx);
-  if (a < threshold) return 0;
-  return Math.sign(dx) * Math.min(9, 1 + Math.floor((a - threshold) / per));
 }

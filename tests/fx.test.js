@@ -32,13 +32,13 @@ const v1 = (pack) => ({
   reverb: 0.3,
   tracks: oldTracks(),
 });
-test("V1/V2/V3 sessions migrate to V4: mix, patterns, mutes and FX kept; old pack maps to a documented new song", () => {
+test("V1/V2/V3 sessions migrate to V5: mix, patterns, mutes and FX kept; old pack maps to a documented new song", () => {
   for (let pack = 0; pack < 3; pack++) {
     const old = v1(pack);
     old.tracks[1].volume = 0.23;
     old.tracks[3].solo = true;
     const s = validateSession(old);
-    assert.equal(s.version, 4);
+    assert.equal(s.version, 5);
     assert.equal(Object.hasOwn(s, "pack"), false);
     assert.equal(s.themeTrack, 0);
     assert.deepEqual(
@@ -60,7 +60,7 @@ test("V1/V2/V3 sessions migrate to V4: mix, patterns, mutes and FX kept; old pac
     };
     delete old.themeTrack;
     const s = validateSession(old);
-    assert.equal(s.version, 4);
+    assert.equal(s.version, 5);
     assert.deepEqual(s.fx, old.fx);
     assert.ok(s.tracks.every((t) => t.song === LEGACY_PACK_SONG[pack]));
   }

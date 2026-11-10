@@ -1,11 +1,9 @@
 import { intensityTargets, intensityEvents } from "./intensity.js";
-import { specialPlan, oldestSpecial } from "./specials.js";
 import {
   PatternClock,
   BPM,
   STEP_SECONDS,
   eventsAt,
-  harmonyOf,
   cutoff,
   audible,
   initialSession,
@@ -17,8 +15,14 @@ import {
   ceilingCurve,
   gateSegments,
   gateLevel,
+  stutterSlice,
+  stutterPlan,
+  tapeSeconds,
+  brakeCurve,
+  crushBits,
+  crushCurve,
 } from "./fx.js";
-import { createVoice, noiseBuffer } from "./synth.js";
+import { createVoice } from "./synth.js";
 import { encodeWav } from "./wav.js";
 export class Engine {
   constructor(session, onUpdate = () => {}) {
@@ -30,9 +34,8 @@ export class Engine {
     this.recording = false;
     this.timeline = [];
     this.sources = new Set();
-    this.loopSources = new Set();
-    this.specialGroups = [];
-    this.specialTriggerCount = 0;
+    this.stutterCount = 0;
+    this.tapeBrakes = 0;
   }
   createGraph(c) {
     this.ctx = c;
@@ -109,15 +112,75 @@ export class Engine {
     this.limiter.ratio.value = 16;
     this.limiter.attack.value = 0.002;
     this.limiter.release.value = 0.085;
-    this.gate.connect(this.limiter);
+    // Post-gate performance stage: CRUSH → TAPE-STOP → STUTTER → limiter.
+    this.crushDry = c.createGain();
+    this.crushWet = c.createGain();
+    this.crushWet.gain.value = 0;
+    this.crusher = c.createWaveShaper();
+    this.crushBits = 8;
+    this.crusher.curve = crushCurve(8);
+    this.crushOut = c.createGain();
+    this.gate.connect(this.crushDry);
+    this.gate.connect(this.crusher);
+    this.crusher.connect(this.crushWet);
+    this.crushDry.connect(this.crushOut);
+    this.crushWet.connect(this.crushOut);
+    // Tape brake: a delay line whose delay grows like d(t) = t²/2T, i.e. playback speed
+    // (1 − d′) falls linearly to zero (pitch and tempo drop together), with a fade to silence.
+    this.tapeDelay = c.createDelay(2);
+    this.tapeDelay.delayTime.value = 0;
+    this.tapeEnv = c.createGain();
+    this.tapeEnv.gain.value = 0;
+    this.tapeMix = c.createGain();
+    this.tapeMix.gain.value = 0;
+    this.tapeDry = c.createGain();
+    this.tapeOut = c.createGain();
+    this.crushOut.connect(this.tapeDry);
+    this.crushOut.connect(this.tapeDelay);
+    this.tapeDelay.connect(this.tapeEnv);
+    this.tapeEnv.connect(this.tapeMix);
+    this.tapeDry.connect(this.tapeOut);
+    this.tapeMix.connect(this.tapeOut);
+    // Beat repeat: capture a slice into a delay line, then close the input and loop it with
+    // feedback 1. One envelope (0 = dry, 1 = repeat) drives both paths via depth-scaled gains.
+    // Beat repeat without a feedback loop: Web Audio delays inside a cycle add one render
+    // quantum (128 frames) per pass, so the repeats would drift. Instead seven taps read the
+    // captured slice at k·slice (k = 1…7, 1/32 needs seven), each gated on only in its window.
+    this.stIn = c.createGain();
+    this.stIn.gain.value = 0;
+    this.stTaps = Array.from({ length: 7 }, () => {
+      const delay = c.createDelay(1),
+        gain = c.createGain();
+      gain.gain.value = 0;
+      this.stIn.connect(delay);
+      delay.connect(gain);
+      return { delay, gain };
+    });
+    this.stWet = c.createGain();
+    this.stWet.gain.value = 0;
+    this.stDry = c.createGain();
+    this.stDry.gain.value = 1;
+    this.stEnv = c.createConstantSource();
+    this.stEnv.offset.value = 0;
+    this.envToWet = c.createGain();
+    this.envToWet.gain.value = 0;
+    this.envToDry = c.createGain();
+    this.envToDry.gain.value = 0;
+    this.stEnv.connect(this.envToWet);
+    this.stEnv.connect(this.envToDry);
+    this.envToWet.connect(this.stWet.gain);
+    this.envToDry.connect(this.stDry.gain);
+    this.stEnv.start();
+    this.tapeOut.connect(this.stDry);
+    this.tapeOut.connect(this.stIn);
+    for (const tap of this.stTaps) tap.gain.connect(this.stWet);
+    this.stDry.connect(this.limiter);
+    this.stWet.connect(this.limiter);
     this.ceiling = c.createWaveShaper();
     this.ceiling.curve = ceilingCurve();
     this.limiter.connect(this.ceiling);
     this.loopBus = c.createGain();
     this.loopBus.connect(this.master);
-    this.specialGain = c.createGain();
-    this.specialGain.gain.value = 0;
-    this.specialGain.connect(this.master);
     this.strips = this.session.tracks.map((_, i) => {
       const filter = c.createBiquadFilter();
       filter.type = "lowpass";
@@ -146,7 +209,6 @@ export class Engine {
       returnGain.connect(this.loopBus);
       return { filter, gain, duck, send: returnGain, delay };
     });
-    this.noise = noiseBuffer(c);
     this.applyMix();
   }
   init() {
@@ -209,19 +271,6 @@ export class Engine {
     await this.init();
     await this.ctx.resume();
     if (this.running) return;
-    if (this.pausedWithSpecials) {
-      const shift = this.ctx.currentTime - this.pauseAnchor.time;
-      this.timeline = this.pauseAnchor.timeline.map((p) => ({
-        ...p,
-        time: p.time + shift,
-      }));
-      this.nextTime = this.pauseAnchor.nextTime + shift;
-      const dt = STEP_SECONDS;
-      for (const p of this.timeline)
-        if (p.time > this.ctx.currentTime)
-          this.scheduleStep(p.step, p.time, dt, p.choices);
-      this.pausedWithSpecials = false;
-    }
     this.loopBus.gain.setTargetAtTime(1, this.ctx.currentTime, 0.008);
     this.running = true;
     this.nextTime = this.paused
@@ -250,7 +299,6 @@ export class Engine {
     clearInterval(this.timer);
     this.running = false;
     this.paused = false;
-    this.pausedWithSpecials = false;
     this.pauseAnchor = null;
     if (this.ctx) {
       await this.ctx.resume();
@@ -264,6 +312,8 @@ export class Engine {
       this.sources.clear();
       this.gate.gain.cancelScheduledValues(this.ctx.currentTime);
       this.gate.gain.setTargetAtTime(1, this.ctx.currentTime, 0.015);
+      this.resetStutter(this.ctx.currentTime);
+      this.releaseTape(this.ctx.currentTime);
     }
     this.tailTimer = setTimeout(() => {
       if (!this.running && !this.recording) void this.ctx?.suspend();
@@ -315,6 +365,7 @@ export class Engine {
     )
       this.duckAt(time);
     this.scheduleGate(step, time, dt);
+    if (step % 4 === 0) this.scheduleStutter(time, dt);
     for (let i = 0; i < 4; i++)
       for (const e of all[i])
         this.note(e, time + (e.offset || 0) * dt, dt, this.strips[i].filter);
@@ -338,6 +389,84 @@ export class Engine {
         time + part.offset,
         0.003,
       );
+  }
+  // Beat repeat, quantised to the audio clock: planned at every beat while STUTTER is the
+  // selected mode (also at depth 0), so raising Y engages at once inside the planned beat.
+  scheduleStutter(start, dt) {
+    if (this.session.fx.mode !== "stutter") return;
+    const plan = stutterPlan(start, stutterSlice(this.session.fx.x), dt),
+      env = this.stEnv.offset,
+      f = plan.fade;
+    env.cancelScheduledValues(start);
+    this.stIn.gain.cancelScheduledValues(start);
+    // capture exactly one slice; the taps replay it, each in its own window
+    this.stIn.gain.setValueAtTime(1, start);
+    this.stIn.gain.setValueAtTime(0, plan.captureEnd);
+    this.stTaps.forEach((tap, i) => {
+      const k = i + 1,
+        on = start + k * plan.slice,
+        live = on < plan.end - 1e-6;
+      tap.gain.gain.cancelScheduledValues(start);
+      tap.gain.gain.setValueAtTime(0, start);
+      tap.delay.delayTime.setValueAtTime(Math.min(k * plan.slice, 1), start);
+      if (!live) return;
+      // switches happen at the edges, where the envelope dips to zero (click-free)
+      tap.gain.gain.setValueAtTime(1, on);
+      tap.gain.gain.setValueAtTime(0, Math.min(on + plan.slice, plan.end));
+    });
+    env.setValueAtTime(0, start);
+    env.setValueAtTime(0, plan.captureEnd);
+    env.linearRampToValueAtTime(1, plan.captureEnd + f);
+    for (const edge of plan.edges.slice(2)) {
+      env.setValueAtTime(1, edge - f);
+      env.linearRampToValueAtTime(0, edge);
+      env.linearRampToValueAtTime(1, edge + f);
+    }
+    env.setValueAtTime(1, plan.end - f * 1.5);
+    env.linearRampToValueAtTime(0, plan.end);
+    this.stutterCount++;
+  }
+  resetStutter(now) {
+    const env = this.stEnv.offset;
+    env.cancelScheduledValues(now);
+    env.setTargetAtTime(0, now, 0.003);
+    this.stIn.gain.cancelScheduledValues(now);
+    this.stIn.gain.setValueAtTime(0, now);
+    for (const tap of this.stTaps) {
+      tap.gain.gain.cancelScheduledValues(now);
+      tap.gain.gain.setTargetAtTime(0, now + 0.012, 0.003);
+    }
+  }
+  // Tape brake starts on the next 16th grid line after Y leaves zero; stays stopped until release.
+  engageTape(now) {
+    const dt = STEP_SECONDS,
+      next =
+        this.timeline.find((p) => p.time > now + 0.003)?.time ?? now + 0.005,
+      seconds = tapeSeconds(this.session.fx.x, dt * 4),
+      d = this.tapeDelay.delayTime,
+      g = this.tapeEnv.gain;
+    this.tapeActive = true;
+    this.tapeBrakes++;
+    d.cancelScheduledValues(now);
+    d.setValueAtTime(0, now);
+    d.setValueCurveAtTime(brakeCurve(seconds), next, seconds);
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(0, now);
+    g.setValueAtTime(0, next);
+    g.linearRampToValueAtTime(1, next + 0.003);
+    g.setValueAtTime(1, next + seconds * 0.55);
+    g.linearRampToValueAtTime(0, next + seconds);
+  }
+  releaseTape(now) {
+    if (!this.tapeActive) return;
+    this.tapeActive = false;
+    const g = this.tapeEnv.gain,
+      d = this.tapeDelay.delayTime;
+    g.cancelScheduledValues(now);
+    g.setTargetAtTime(0, now, 0.004);
+    d.cancelScheduledValues(now);
+    d.setValueAtTime(d.value, now);
+    d.setValueAtTime(0, now + 0.04);
   }
   position() {
     if (this.paused && this.frozenPosition) return this.frozenPosition;
@@ -374,7 +503,20 @@ export class Engine {
     ramp(this.echoWet.gain, target.echo);
     ramp(this.flangeWet.gain, target.flanger);
     ramp(this.wet.gain, this.session.reverb * 0.65);
-    ramp(this.specialGain.gain, this.session.specialLevel * 0.55);
+    ramp(this.crushWet.gain, target.crush, 0.01);
+    ramp(this.crushDry.gain, 1 - target.crush, 0.01);
+    const bits = crushBits(this.session.fx.x);
+    if (bits !== this.crushBits) {
+      this.crushBits = bits;
+      this.crusher.curve = crushCurve(bits);
+    }
+    ramp(this.envToWet.gain, target.stutter, 0.006);
+    ramp(this.envToDry.gain, -target.stutter, 0.006);
+    ramp(this.tapeMix.gain, target.tape, 0.008);
+    ramp(this.tapeDry.gain, 1 - target.tape, 0.008);
+    if (target.tape > 0.02 && !this.tapeActive) this.engageTape(now);
+    else if (target.tape <= 0.02) this.releaseTape(now);
+    if (this.session.fx.mode !== "stutter") this.resetStutter(now);
     this.strips.forEach((strip, i) => {
       const t = this.session.tracks[i];
       ramp(
@@ -392,7 +534,7 @@ export class Engine {
     for (const p of this.timeline)
       if (p.time >= now) this.scheduleGate(p.step, p.time, dt);
   }
-  note(e, time, dt, dest, group) {
+  note(e, time, dt, dest) {
     return createVoice(
       this.ctx,
       { ...e, energy: e.energy ?? this.session.intensity ?? 0 },
@@ -400,91 +542,11 @@ export class Engine {
       dt,
       dest,
       this.library,
-      this.noise,
       (source) => {
         this.sources.add(source);
-        if (group) group.sources.add(source);
-        else this.loopSources.add(source);
-        source.addEventListener("ended", () => {
-          this.sources.delete(source);
-          this.loopSources.delete(source);
-          if (group) {
-            group.sources.delete(source);
-            if (!group.sources.size) this.finishSpecial(group);
-          }
-        });
+        source.addEventListener("ended", () => this.sources.delete(source));
       },
     );
-  }
-  finishSpecial(group) {
-    group.gain.disconnect();
-    this.specialGroups = this.specialGroups.filter((g) => g !== group);
-    this.onUpdate();
-    this.idleAfterSpecial();
-  }
-  idleAfterSpecial() {
-    if (this.disposed) return;
-    if (typeof this.ctx?.startRendering === "function") return;
-    clearTimeout(this.specialIdleTimer);
-    if (!this.running && !this.recording && !this.specialGroups.length)
-      this.specialIdleTimer = setTimeout(() => {
-        if (!this.running && !this.recording && !this.specialGroups.length)
-          void this.ctx?.suspend();
-      }, 1500);
-  }
-  releaseSpecial(group) {
-    const now = this.ctx.currentTime;
-    group.gain.gain.cancelScheduledValues(now);
-    group.gain.gain.setTargetAtTime(0, now, 0.004);
-    for (const source of group.sources) {
-      try {
-        source.stop(now + 0.015);
-      } catch {
-        /* Ended. */
-      }
-    }
-    this.specialGroups = this.specialGroups.filter((g) => g !== group);
-  }
-  scheduleSpecial(id, when, step = this.position().step, limit = true) {
-    const plan = specialPlan(id, harmonyOf(this.position().choices), step),
-      old = limit ? oldestSpecial(this.specialGroups) : undefined;
-    if (old) this.releaseSpecial(old);
-    const gain = this.ctx.createGain();
-    gain.gain.value = 1;
-    gain.connect(this.specialGain);
-    const group = { id, gain, sources: new Set() };
-    this.specialGroups.push(group);
-    this.specialTriggerCount++;
-    const dt = STEP_SECONDS;
-    for (const item of plan)
-      this.note(item.event, when + item.offset, dt, gain, group);
-    this.onUpdate();
-    return group;
-  }
-  async triggerSpecial(id) {
-    clearTimeout(this.specialIdleTimer);
-    clearTimeout(this.tailTimer);
-    await this.init();
-    if (this.paused && !this.pausedWithSpecials) {
-      this.frozenPosition = this.position();
-      this.pauseAnchor = {
-        time: this.ctx.currentTime,
-        nextTime: this.nextTime,
-        timeline: this.timeline.map((p) => ({ ...p })),
-      };
-      this.loopBus.gain.cancelScheduledValues(this.ctx.currentTime);
-      this.loopBus.gain.setValueAtTime(0, this.ctx.currentTime);
-      for (const source of this.loopSources) {
-        try {
-          source.stop();
-        } catch {
-          /* Ended. */
-        }
-      }
-      this.pausedWithSpecials = true;
-    }
-    await this.ctx.resume();
-    return this.scheduleSpecial(id, this.ctx.currentTime + 0.004);
   }
   async startRecording() {
     await this.init();
@@ -511,7 +573,6 @@ export class Engine {
   async dispose() {
     this.disposed = true;
     clearTimeout(this.tailTimer);
-    clearTimeout(this.specialIdleTimer);
     clearInterval(this.timer);
     if (this.ctx) await this.ctx.close();
   }
@@ -531,10 +592,9 @@ export async function renderDiagnostic({
   pump = 0.6,
   reverb = 0,
   bars,
-  specials = [],
-  onlySpecials = false,
   intensity = 0,
   intensitySweep = [],
+  fxSweep = [],
   switches = [],
 } = {}) {
   const c = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000),
@@ -555,37 +615,36 @@ export async function renderDiagnostic({
   e.ceiling.connect(c.destination);
   const dt = STEP_SECONDS;
   const pendingSwitches = [...switches].sort((a, b) => a.step - b.step);
-  if (!onlySpecials)
-    for (
-      let step = 0;
-      0.05 + step * dt < seconds - 0.1 &&
-      (bars === undefined || step < bars * 16);
-      step++
-    ) {
-      while (pendingSwitches.length && pendingSwitches[0].step <= step) {
-        const sw = pendingSwitches.shift();
-        Object.assign(s.tracks[sw.track], sw.change);
-      }
-      const when = 0.05 + step * dt;
-      const next =
-        intensitySweep.filter((p) => p.time <= when - 0.05 + 1e-8).at(-1)
-          ?.value ?? intensity;
-      if (next !== s.intensity) {
-        s.intensity = next;
-        e.applyMix(when);
-      }
-      e.scheduleStep(step, when, dt);
+  const pendingFx = [...fxSweep].sort((a, b) => a.time - b.time);
+  for (
+    let step = 0;
+    0.05 + step * dt < seconds - 0.1 &&
+    (bars === undefined || step < bars * 16);
+    step++
+  ) {
+    while (pendingSwitches.length && pendingSwitches[0].step <= step) {
+      const sw = pendingSwitches.shift();
+      Object.assign(s.tracks[sw.track], sw.change);
     }
-  for (const shot of specials) {
-    s.intensity =
-      intensitySweep.filter((p) => p.time <= shot.time).at(-1)?.value ??
-      intensity;
-    e.scheduleSpecial(
-      shot.id,
-      shot.time + 0.05,
-      shot.step ?? Math.floor(shot.time / dt),
-      false,
-    );
+    const when = 0.05 + step * dt;
+    const next =
+      intensitySweep.filter((p) => p.time <= when - 0.05 + 1e-8).at(-1)
+        ?.value ?? intensity;
+    if (next !== s.intensity) {
+      s.intensity = next;
+      e.applyMix(when);
+    }
+    // fxSweep: timed XY/mode changes ({ time, mode?, x?, depth? }) like a live gesture.
+    let fxChanged = false;
+    while (pendingFx.length && pendingFx[0].time <= when - 0.05 + 1e-8) {
+      const change = { ...pendingFx.shift() };
+      delete change.time;
+      Object.assign(s.fx, change);
+      fxChanged = true;
+    }
+    if (fxChanged) e.applyMix(when);
+    e.timeline = [{ step, time: when }];
+    e.scheduleStep(step, when, dt);
   }
   return c.startRendering();
 }

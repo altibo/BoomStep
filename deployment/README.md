@@ -18,7 +18,7 @@ Der angemeldete CLI-Zugang braucht kein erweitertes Workflow-Scope: die App wird
 
 ## Echte Geräteabnahme
 
-Auf iPhone/Safari und Android/Chrome: Ton, federnde Kick/Bass, alle sechs Specials einzeln und gleichzeitig (auch bei angehaltenem Jam), schnelle Patternwechsel über Takt 2/3, Vordergrund-Pause/Resume, XY-Hold/Release/DRY, WAV samt FX in anderer Audio-App anhören, Sessionimport und Offline-Start prüfen. Browser-Schriftvergrößerung und Browserleisten können die benötigte Bildschirmhöhe ändern. Die automatisierte Chromium-Abnahme ist kein behaupteter iPhone-Hörtest.
+Auf iPhone/Safari und Android/Chrome: Ton, federnde Kick/Bass, STUTTER 1/8·1/16·1/32, TAPE-STOP, CRUSH (auch in der WAV), Querformat-Layout mit Daumen, schnelle Patternwechsel über Takt 2/3, Vordergrund-Pause/Resume, XY-Hold/Release/DRY, WAV samt FX in anderer Audio-App anhören, Sessionimport und Offline-Start prüfen. Browser-Schriftvergrößerung und Browserleisten können die benötigte Bildschirmhöhe ändern. Die automatisierte Chromium-Abnahme ist kein behaupteter iPhone-Hörtest.
 
 ## Quellenstand V3
 

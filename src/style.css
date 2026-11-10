@@ -125,7 +125,8 @@ h1 span {
   max-width: 56%;
   height: 44px;
 }
-#pack {
+#pack,
+#all-songs {
   width: 100%;
   font-size: 12px;
   height: 44px;
@@ -139,6 +140,7 @@ h1 span {
   margin: 0;
   font-size: 11px;
   line-height: 13px;
+  white-space: nowrap;
   pointer-events: none;
 }
 h2 {
@@ -164,7 +166,7 @@ h2 {
 .track-top {
   display: grid;
   align-items: center;
-  grid-template-columns: 100px minmax(0, 1fr) 44px 44px;
+  grid-template-columns: 188px minmax(0, 1fr);
   gap: 2px;
   height: 44px;
 }
@@ -172,7 +174,8 @@ h2 {
 .solo {
   height: 44px;
   font-size: 11px;
-  padding: 1px;
+  padding: 0;
+  letter-spacing: -0.2px;
   border-radius: 22px;
 }
 .mute[aria-pressed="true"] {
@@ -191,8 +194,9 @@ h2 {
 }
 .track-bottom {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  align-items: center;
+  grid-template-columns: 44px 44px repeat(3, minmax(0, 1fr));
+  gap: 2px 5px;
   height: 44px;
 }
 .mini {
@@ -205,6 +209,7 @@ h2 {
 }
 .mini span {
   position: absolute;
+  white-space: nowrap;
   left: 0;
   top: 0;
   display: block;
@@ -237,20 +242,6 @@ h2 {
   border: 0;
   background: transparent;
 }
-.fx-section {
-  display: grid;
-  align-items: center;
-  grid-template-columns: 160px minmax(0, 1fr);
-  gap: 4px;
-  height: 184px;
-  margin-top: 4px;
-  padding: 0;
-}
-.orbit-deck {
-  text-align: center;
-  width: 160px;
-  height: 176px;
-}
 #xy-label {
   display: block;
   font-size: 13px;
@@ -270,12 +261,6 @@ h2 {
   font-size: 11px;
   line-height: 16px;
 }
-.orbit-visual {
-  position: relative;
-  width: 144px;
-  height: 144px;
-  margin: 0 auto;
-}
 #orbit {
   display: block;
   pointer-events: none;
@@ -294,8 +279,9 @@ h2 {
 .orbit-numbers text {
   fill: #e3f4fa;
   text-anchor: middle;
-  font-weight: 600;
-  font-size: 14px;
+  font-weight: 700;
+  /* 20 of 160 viewBox units at an 88px ring = 11px on screen. */
+  font-size: 20px;
 }
 #orbit-head {
   fill: var(--cyan);
@@ -350,12 +336,6 @@ h2 {
   margin-top: 4px;
   color: #e0edf4;
 }
-.fx-pads {
-  display: grid;
-  height: 136px;
-  gap: 2px;
-  grid-template-columns: repeat(2, minmax(44px, 1fr));
-}
 .fx-pads button {
   overflow-wrap: normal;
   min-height: 44px;
@@ -377,34 +357,6 @@ h2 {
   border: 2px solid var(--cyan);
   background: color-mix(in srgb, var(--cyan) 22%, #0c1824);
   color: #f4f8fb;
-}
-.specials {
-  border-radius: 12px;
-  margin-top: 4px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-}
-.special-pads {
-  display: grid;
-  touch-action: none;
-  user-select: none;
-  grid-template-columns: repeat(3, minmax(44px, 1fr));
-  gap: 2px;
-}
-.special-pad {
-  border-radius: 12px;
-  background: color-mix(in srgb, var(--theme-bg) 9%, #142533);
-  border-color: #4c7188;
-  height: 48px;
-  min-height: 44px;
-  font-size: 12px;
-  padding: 2px;
-}
-.special-pad.firing {
-  background: var(--cyan);
-  color: #06101d;
-  border-color: white;
 }
 .transport {
   display: grid;
@@ -516,31 +468,12 @@ footer {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
 }
-.mix-strip {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(44px, 1fr));
-  gap: 4px;
-  height: 44px;
-  margin-top: 4px;
-}
-.special-level {
-  min-width: 0;
-}
 .xy-depth,
 #xy-hint {
   height: 16px;
   line-height: 16px;
   font-size: 11px;
   white-space: nowrap;
-}
-.fx-right {
-  display: grid;
-  grid-template-rows: 136px 48px;
-  height: 184px;
-  min-width: 0;
-}
-.performance-status {
-  min-width: 0;
 }
 #orbit-status,
 #interaction-status {
@@ -555,67 +488,11 @@ footer {
   white-space: normal;
   color: #d5eaf4;
 }
-@media (max-width: 359px) {
-  .track-top {
-    grid-template-columns: 92px minmax(0, 1fr) 44px 44px;
-  }
-  .fx-section {
-    grid-template-columns: 160px minmax(0, 1fr);
-  }
-  .orbit-deck {
-    justify-self: auto;
-  }
-  .fx-pads {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .fx-pads button {
-    font-size: 12px;
-    min-height: 44px;
-    height: 67px;
-  }
-  .transport {
-    height: 98px;
-    grid-template-columns: repeat(3, minmax(44px, 1fr));
-  }
-  .special-pad {
-    min-height: 44px;
-    height: 48px;
-  }
-}
-@media (min-width: 760px) {
-  main {
-    max-width: 960px;
-  }
-  .tracks {
-    grid-template-columns: 1fr 1fr;
-  }
-  .fx-section {
-    grid-template-columns: 160px minmax(0, 1fr);
-  }
-  .fx-pads {
-    grid-template-columns: repeat(2, minmax(44px, 1fr));
-  }
-  .special-pads {
-    grid-template-columns: repeat(3, minmax(44px, 1fr));
-  }
-}
 @media (prefers-reduced-motion: reduce) {
   * {
     animation: none !important;
     transition: none !important;
   }
-}
-
-.specials-caption {
-  height: 16px;
-  font-size: 12px;
-  line-height: 16px;
-}
-.specials-caption small {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--muted);
-  margin-left: 8px;
 }
 
 /* Krassheit occupies the former branding slot, not another musical row. */
@@ -696,23 +573,6 @@ header {
       transparent
     );
 }
-.special-pad.firing {
-  background: color-mix(in srgb, var(--cyan) 22%, transparent);
-  border-color: var(--cyan);
-  color: #eff5fa;
-  box-shadow: 0 0 12px
-    color-mix(
-      in srgb,
-      var(--cyan) calc(var(--light-glow, 0.1) * 100%),
-      transparent
-    );
-}
-.lights-quiet .special-pad.firing {
-  background: color-mix(in srgb, var(--theme-bg) 9%, #142533);
-  border-color: #4c7188;
-  color: #eff5fa;
-  box-shadow: none;
-}
 @media (max-width: 359px) {
   header {
     grid-template-columns: 110px minmax(0, 1fr) 44px;
@@ -726,23 +586,63 @@ header {
   color: #eff5fa;
 }
 
-/* Song swipe cell + four-detent pattern slider (replaces the four pattern buttons). */
-.song-swipe {
-  position: relative;
+/* Song cell: three zones – ‹ button | display only (track, status, song) | › button. */
+.song-cell {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 2px;
   height: 44px;
-  min-width: 44px;
-  padding: 3px 7px;
-  border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--song) 50%, var(--line));
-  background: color-mix(in srgb, var(--song) 14%, #0a1520);
-  touch-action: none;
+  min-width: 140px;
   user-select: none;
-  cursor: grab;
-  overflow: hidden;
+}
+.song-step {
+  min-width: 44px;
+  min-height: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--song) 55%, var(--line));
+  background: color-mix(in srgb, var(--song) 20%, #132331);
+  color: #eff5fa;
+  touch-action: manipulation;
+  cursor: pointer;
+  transition: background-color 150ms ease-out;
+}
+.song-step i {
+  font-style: normal;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 40px;
+}
+.song-step:hover {
+  border-color: color-mix(in srgb, var(--song) 80%, white);
+}
+.song-step:active,
+.song-step.hit {
+  background: color-mix(in srgb, var(--song) 55%, #132331);
+  border-color: color-mix(in srgb, var(--song) 60%, white);
+  color: white;
+}
+.song-step:focus-visible {
+  outline: 2px solid white;
+  outline-offset: -2px;
+}
+/* Display only: darker, borderless, no pointer action. */
+.song-display {
+  container-type: inline-size;
+  min-width: 0;
+  height: 44px;
+  padding: 3px 2px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--song) 7%, #070f17);
+  text-align: center;
+  pointer-events: none;
+  cursor: default;
 }
 .song-line {
   display: block;
-  margin: 0 -5px;
   height: 16px;
   font-size: 11px;
   line-height: 16px;
@@ -765,33 +665,22 @@ header {
   font-size: 12px;
   font-weight: 800;
   line-height: 20px;
+  letter-spacing: -0.15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--song);
 }
-.song-swipe.previewing {
-  outline: 2px solid white;
-  outline-offset: -2px;
-}
-.song-swipe.previewing .song-name {
-  color: var(--song);
-}
-.song-swipe.queued {
+.song-cell.queued .song-display {
   border: 1px dashed var(--amber);
   box-shadow: inset 0 0 0 1px var(--amber);
 }
-.song-swipe.queued .song-cue,
-.song-swipe.queued .song-name {
+.song-cell.queued .song-cue {
   color: #ffda95;
 }
-.song-swipe.canceling {
-  outline: 2px dashed #e3edf3;
-  outline-offset: -2px;
-  background: #1a2630;
-}
-.song-swipe.canceling .song-name {
-  color: #e3edf3;
+/* Pending target: name in the target song's own colour (amber stays on border + cue). */
+.song-cell.queued .song-name {
+  color: var(--song-next);
 }
 .variant-slider {
   position: relative;
@@ -868,14 +757,13 @@ header {
   outline: 2px dashed #e3edf3;
   outline-offset: -2px;
 }
-.inaudible .song-swipe {
+.inaudible .song-display {
   background: #0d161e;
 }
 .inaudible .song-name,
 .inaudible .stop.active {
   opacity: 0.55;
 }
-.song-swipe:focus-visible,
 .variant-slider:focus-visible {
   outline: 2px solid white;
   outline-offset: 2px;
@@ -901,27 +789,368 @@ header {
     display: inline;
   }
 }
-/* Resting swipe hint: thin chevrons inside the side padding, no extra height. */
-.song-swipe::before,
-.song-swipe::after {
-  position: absolute;
-  top: 12px;
+/* Narrow song cells: abbreviated track label (DR/BA/ST/RF) so the cue never clips. */
+@container (max-width: 84px) {
+  .label-long {
+    display: none;
+  }
+  .label-short {
+    display: inline;
+  }
+}
+
+/* ===== Stage layout =====
+   Portrait: header, tracks, master, FX choice, phase | XY, transport | HOLD/FX AUS.
+   Landscape (main layout): left = phase display + every global control + transport,
+   middle = the four tracks as one centred block, right = FX choice, HOLD/FX AUS and the
+   XY pad in the bottom-right thumb corner (≥ 28px clear of the screen edges). */
+#performance {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 184px;
+  grid-template-areas:
+    "head head"
+    "tracks tracks"
+    "master master"
+    "fx fx"
+    "phase xy"
+    "tp hold";
+  gap: 4px;
+}
+.global,
+.fxcol {
+  display: contents;
+}
+header {
+  grid-area: head;
+  min-width: 0;
+}
+.tracks {
+  grid-area: tracks;
+  margin: 0;
+}
+.master {
+  grid-area: master;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  gap: 4px 8px;
+  min-width: 0;
+}
+.fx-pads {
+  grid-area: fx;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(44px, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+.fx-pads button {
+  height: 44px;
+  min-height: 44px;
+  padding: 1px 0;
+  letter-spacing: -0.2px;
+  font-size: 12px;
+  line-height: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+}
+.fx-pads button span {
+  display: block;
+  margin: 0;
+  color: #b9d0df;
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 13px;
+}
+.fx-pads .fx-stutter {
+  grid-column: span 2;
   font-size: 13px;
-  line-height: 20px;
-  color: color-mix(in srgb, var(--song) 70%, #9fb2c0);
+  letter-spacing: 0.4px;
+}
+.fx-pads button[aria-pressed="true"] {
+  border: 2px solid var(--cyan);
+  background: color-mix(in srgb, var(--cyan) 22%, #0c1824);
+  color: #f4f8fb;
+}
+.fx-pads button[aria-pressed="true"] span {
+  color: #e6f2f8;
+}
+.phase {
+  grid-area: phase;
+  display: grid;
+  grid-template-columns: 88px minmax(0, 1fr);
+  gap: 6px;
+  align-items: center;
+  align-content: center;
+  min-width: 0;
+}
+#orbit {
+  display: block;
+  width: 88px;
+  height: 88px;
   pointer-events: none;
+  overflow: visible;
 }
-.song-swipe::before {
-  content: "‹";
-  left: 1px;
+.phase-text {
+  min-width: 0;
 }
-.song-swipe::after {
-  content: "›";
-  right: 1px;
+#orbit-status {
+  margin: 0;
+  height: auto;
+  white-space: normal;
+  color: #eef6fa;
 }
-.song-swipe.previewing::before,
-.song-swipe.previewing::after,
-.song-swipe.canceling::before,
-.song-swipe.canceling::after {
-  content: none;
+#orbit-bar {
+  display: block;
+  font-size: 17px;
+  line-height: 22px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+#orbit-chord {
+  display: block;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  color: #d8e8f0;
+}
+#interaction-status {
+  margin-top: 4px;
+  height: auto;
+  max-height: 48px;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: normal;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  color: #d5eaf4;
+}
+.xy-wrap {
+  grid-area: xy;
+  display: grid;
+  grid-template-rows: 14px minmax(160px, 1fr) 14px;
+  gap: 2px;
+  min-width: 0;
+}
+.xy-axis,
+.xy-depth,
+#xy-hint {
+  height: 14px;
+  margin: 0;
+  font-size: 11px;
+  line-height: 14px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #c0dbe6;
+}
+#xy {
+  position: relative;
+  left: auto;
+  top: auto;
+  width: auto;
+  height: auto;
+  min-height: 120px;
+  border-radius: 18px;
+}
+.transport {
+  grid-area: tp;
+  display: grid;
+  grid-template-columns: minmax(64px, 1.5fr) repeat(2, minmax(44px, 1fr));
+  gap: 4px;
+  height: 44px;
+  margin: 0;
+}
+.transport button,
+.fx-hold button {
+  height: 44px;
+  min-height: 44px;
+  font-size: 12px;
+}
+.fx-hold {
+  grid-area: hold;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(44px, 1fr));
+  gap: 4px;
+}
+@media (max-width: 359px) {
+  .track-top {
+    grid-template-columns: 180px minmax(0, 1fr);
+  }
+  #performance {
+    grid-template-columns: minmax(0, 1fr) 150px;
+  }
+  .phase {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+  }
+  .mini span {
+    letter-spacing: -0.45px;
+  }
+}
+@media (min-width: 760px) and (orientation: portrait) {
+  main {
+    max-width: 720px;
+  }
+}
+@media (orientation: landscape) and (min-width: 560px) {
+  main {
+    max-width: 1180px;
+    padding: 4px max(6px, env(safe-area-inset-right))
+      max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  }
+  #performance {
+    grid-template-columns:
+      minmax(150px, 1fr) clamp(310px, 44%, 460px)
+      minmax(160px, 1fr);
+    grid-template-rows: minmax(0, 1fr);
+    grid-template-areas: "global tracks fxcol";
+    gap: 6px;
+    height: min(
+      calc(100dvh - 4px - max(4px, env(safe-area-inset-bottom))),
+      500px
+    );
+    min-height: 352px;
+  }
+  .global > *,
+  .fxcol > * {
+    grid-area: auto;
+  }
+  .global {
+    grid-area: global;
+    display: grid;
+    grid-template-rows: 88px 92px 92px 44px;
+    /* phase display at the top, PLAY/REC/Stop at the bottom for the left thumb */
+    align-content: space-between;
+    gap: 4px;
+    min-width: 0;
+  }
+  .phase {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+  #interaction-status {
+    margin-top: 2px;
+  }
+  header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 44px;
+    grid-template-rows: 44px 44px;
+    gap: 4px;
+    height: 92px;
+  }
+  header .intensity-control {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  #all-songs {
+    font-size: 11px;
+  }
+  header #light-mode {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .master {
+    grid-template-columns: repeat(2, minmax(44px, 1fr));
+    grid-template-rows: 44px 44px;
+  }
+  .tracks {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: repeat(4, 88px);
+    align-content: center;
+    gap: 2px;
+    min-height: 0;
+  }
+  .track {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .track-top {
+    grid-template-columns: clamp(186px, 58%, 210px) minmax(0, 1fr);
+  }
+  .fxcol {
+    grid-area: fxcol;
+    display: grid;
+    grid-template-rows: auto 44px minmax(0, 1fr);
+    gap: 4px;
+    min-width: 0;
+    container-type: inline-size;
+  }
+  .fx-pads {
+    grid-template-columns: repeat(3, minmax(44px, 1fr));
+  }
+  .fx-pads .fx-stutter {
+    grid-column: 1 / -1;
+  }
+  .fx-pads button {
+    font-size: 11px;
+  }
+  .xy-wrap {
+    grid-template-rows: 14px minmax(120px, 1fr) 14px;
+    /* thumb corner, but ≥ 28px from the right and bottom screen edge (safe area added
+       by main padding) and 8px air towards the FX keys above */
+    margin: 0 23px 12px 0;
+  }
+  /* notices appear inside the bar display (#phase-notice), never as an overlay */
+  #notice {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    margin: 0;
+  }
+  #phase-notice:not(:empty) {
+    display: -webkit-box;
+  }
+  .phase-text:has(#phase-notice:not(:empty)) #interaction-status {
+    display: none;
+  }
+}
+/* Wide right column: STUTTER spans two of four columns, two rows of keys. */
+@container (min-width: 212px) {
+  .fx-pads {
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
+  }
+  .fx-pads .fx-stutter {
+    grid-column: span 2;
+  }
+  .fx-pads button {
+    font-size: 11px;
+  }
+}
+@media (orientation: landscape) and (min-width: 560px) and (max-height: 372px) {
+  main {
+    padding-top: 1px;
+    padding-bottom: max(1px, env(safe-area-inset-bottom));
+  }
+  #performance {
+    gap: 4px;
+    height: calc(100dvh - 2px - env(safe-area-inset-bottom));
+  }
+  .global {
+    gap: 3px;
+  }
+  .track {
+    padding: 0 3px;
+  }
+}
+
+#phase-notice {
+  display: none;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  color: #d5eaf4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+#phase-notice.rec,
+#orbit-chord.rec {
+  color: var(--red, #ff637a);
+  font-weight: 800;
 }
