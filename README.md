@@ -30,7 +30,7 @@
 ### Song wischen (pro Spur)
 
 - Linkes Feld jeder Spur zeigt Spurname, Status und Songname. **Rechts wischen = nächster, links = vorheriger Song** (ringförmig; ab 28px ein Schritt, je weitere 64px ein Song mehr).
-- **Während des Wischens** zeigen Karte und die ganze Oberfläche Farbe und Namen des Ziel-Songs („→ Name“, weißer Rahmen). **Loslassen** merkt ihn für den nächsten Takt vor (Amber gestrichelt, „ab Tn“), gemeinsame Loop-Phase bleibt. Beim Stop wird sofort übernommen.
+- **Während des Wischens** zeigen Karte und die ganze Oberfläche Farbe und Namen des Ziel-Songs (weißer Rahmen, Status „→ los ✓“). **Loslassen** merkt ihn für den nächsten Takt vor (Amber gestrichelt, „→ ab Tn“), gemeinsame Loop-Phase bleibt. Beim Stop wird sofort übernommen.
 - Mehr als 24px nach oben/unten = sichtbares **Abbrechen**; dort loslassen, **Escape**, `pointercancel` oder Capture-Verlust verwerfen die Vorschau und stellen die vorige Farbe wieder her. Eine bestehende Vormerkung bleibt dabei erhalten. Zurück ins Feld ziehen erlaubt wieder Vormerken.
 - Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Tastatur: Pfeiltasten im fokussierten Songfeld (role=slider, 1–10), Home/End.
 - **ALLE SPUREN…** setzt alle vier Spuren zum nächsten Takt auf einen Song (Mix und Patternstufen bleiben).
@@ -42,7 +42,7 @@ Vier Rasten je Spur (role=slider, 1–4). Tippen oder Ziehen wählt; Ziehen zeig
 ### Songfarbe auf der ganzen Oberfläche
 
 - **Regel:** Die App übernimmt die Farbe des Songs, der **zuletzt per Wischen oder Tastatur** auf einer Spur gewählt wurde (`session.themeTrack`) – schon während er vorgemerkt ist. Beim Start und nach „ALLE SPUREN“ führt die Drums-Spur. Die führende Spur trägt eine helle Kante.
-- Beim Wischen wird die Oberfläche vorab getönt (`--theme` per registrierter CSS-Farbe, 0,4 s weich, ohne Rücksprung); Loslassen behält, Abbruch stellt zurück. **Reduced Motion**: sofortiger Wechsel. Jede Spurkarte zeigt zusätzlich ihre eigene Songfarbe.
+- Beim Wischen wird die ganze Oberfläche schon in die kommende Songfarbe getönt, auch während der Vormerkung; Loslassen behält, Abbruch stellt zurück. Akzente (`--theme`: Regler, Orbit, Play/Pause, FX-Kacheln, Krassheit) wechseln **sofort** – ein Farbübergang zwischen zwei Songfarben würde Zwischentöne wie Sand/Amber erzeugen, die für „vorgemerkt“ reserviert sind. Nur die dunkle Hintergrundtönung (`--theme-bg`) blendet 0,4 s weich. **Reduced Motion**: auch der Hintergrund sofort. Jede Spurkarte zeigt zusätzlich ihre eigene Songfarbe.
 - Hintergrund bleibt dunkel (Seitenluminanz < 0,02). **Amber bleibt ausschließlich Vormerkung, Rot ausschließlich Aufnahme**; Songfarben halten ≥ 25° Farbtonabstand zu beiden. Gemessene Kontraste (Chromium, alle 10 Themes): Songname auf Songfeld 5,6–10,8:1, Spurtext 11,8–14:1, Ziffer auf aktiver Raste 7,2–16:1, FX-Text 8,7–12,2:1 (Details: [docs/songs-qa.md](docs/songs-qa.md)).
 - Krassheit hellt die Songfarbe bis 22 % Richtung Weiß auf und verstärkt den Glow (statt der früheren Cyan→Pink-Palette); max. 3 Pulse/s wie bisher.
 

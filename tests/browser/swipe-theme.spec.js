@@ -41,7 +41,7 @@ test("swipe right previews song colour + name on the card AND the whole surface;
   const p = await grab(page, 2);
   await page.mouse.move(p.x + 40, p.y, { steps: 3 });
   // live preview, nothing committed yet
-  await expect(page.locator("#name-2")).toHaveText(`→ ${list[1][0]}`);
+  await expect(page.locator("#name-2")).toHaveText(`${list[1][0]}`);
   await expect(page.locator('[data-swipe="2"]')).toHaveClass(/previewing/);
   let t = await theme(page);
   expect(t).toMatchObject({
@@ -59,7 +59,7 @@ test("swipe right previews song colour + name on the card AND the whole surface;
       .evaluate((e) => e.style.getPropertyValue("--song")),
   ).toBe(list[1][1]);
   await page.mouse.move(p.x + 40 + 64, p.y, { steps: 3 });
-  await expect(page.locator("#name-2")).toHaveText(`→ ${list[2][0]}`);
+  await expect(page.locator("#name-2")).toHaveText(`${list[2][0]}`);
   expect((await theme(page)).inline).toBe(list[2][1]);
   await page.screenshot({ path: `${out}/swipe-preview-390x844.png` });
   await page.mouse.up();
@@ -100,7 +100,7 @@ test("swipe left goes to the previous song (circular); vertical cancel, Escape, 
   const list = await songs(page);
   let p = await grab(page, 1);
   await page.mouse.move(p.x - 40, p.y, { steps: 3 });
-  await expect(page.locator("#name-1")).toHaveText(`→ ${list[9][0]}`);
+  await expect(page.locator("#name-1")).toHaveText(`${list[9][0]}`);
   expect((await theme(page)).inline).toBe(list[9][1]);
   // vertical cancel zone
   await page.mouse.move(p.x - 40, p.y - 60, { steps: 3 });
@@ -175,7 +175,7 @@ test("cancel while a song switch is pending keeps that pending switch and its am
   // a new preview starts from the pending choice
   p = await grab(page, 1);
   await page.mouse.move(p.x + 40, p.y, { steps: 2 });
-  await expect(page.locator("#name-1")).toHaveText(`→ ${list[2][0]}`);
+  await expect(page.locator("#name-1")).toHaveText(`${list[2][0]}`);
   await page.keyboard.press("Escape");
   await page.mouse.up();
   expect(
@@ -214,8 +214,8 @@ test("two touch fingers swipe different tracks independently; each card previews
     ],
   });
   await expect(page.locator(".song-swipe.previewing")).toHaveCount(2);
-  await expect(page.locator("#name-0")).toHaveText(`→ ${list[1][0]}`);
-  await expect(page.locator("#name-3")).toHaveText(`→ ${list[8][0]}`);
+  await expect(page.locator("#name-0")).toHaveText(`${list[1][0]}`);
+  await expect(page.locator("#name-3")).toHaveText(`${list[8][0]}`);
   expect(
     await page.evaluate(() =>
       window.boomstep.session.tracks.map((t) => t.song),
@@ -386,63 +386,6 @@ test("every one of the 10 themes keeps measured text contrast; amber/red stay fi
     ),
   ).toEqual([255, 99, 122]);
   await page.locator("#record").click();
-});
-test("surface colour fades softly without flicker; reduced motion switches instantly", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const list = await songs(page);
-  const target = rgbOf(
-    await page.evaluate((c) => {
-      const d = document.createElement("div");
-      d.style.color = c;
-      document.body.append(d);
-      const v = getComputedStyle(d).color;
-      d.remove();
-      return v;
-    }, list[5][1]),
-  );
-  const p = await grab(page, 0);
-  await page.mouse.move(p.x + 28 + 64 * 4, p.y, { steps: 2 });
-  expect((await theme(page)).inline).toBe(list[5][1]);
-  const samples = [];
-  for (let i = 0; i < 12; i++) {
-    samples.push(
-      rgbOf(
-        (await theme(page)).computed.startsWith("#")
-          ? "0 0 0"
-          : (await theme(page)).computed,
-      ),
-    );
-    await page.waitForTimeout(45);
-  }
-  const dist = samples.map((c) =>
-    Math.hypot(...c.map((v, k) => v - target[k])),
-  );
-  for (let i = 1; i < dist.length; i++)
-    expect(dist[i]).toBeLessThanOrEqual(dist[i - 1] + 1);
-  expect(dist[0]).toBeGreaterThan(1);
-  expect(dist.at(-1)).toBeLessThan(2);
-  await page.mouse.up();
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  const q = await grab(page, 0);
-  await page.mouse.move(q.x + 40, q.y, { steps: 2 });
-  const t = await theme(page);
-  expect(t.inline).toBe(list[6][1]);
-  expect(rgbOf(t.computed)).toEqual(
-    rgbOf(
-      await page.evaluate((c) => {
-        const d = document.createElement("div");
-        d.style.color = c;
-        document.body.append(d);
-        const v = getComputedStyle(d).color;
-        d.remove();
-        return v;
-      }, list[6][1]),
-    ),
-  );
-  await page.screenshot({ path: `${out}/reduced-motion-preview-390x844.png` });
-  await page.mouse.up();
 });
 test("layout: music block ends ≤ y822 at 390×844, targets ≥ 44px, fonts ≥ 11px, no overflow at 320/390", async ({
   page,

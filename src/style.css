@@ -7,15 +7,16 @@
     "Segoe UI",
     sans-serif;
   color: #eff5fa;
-  background: color-mix(in srgb, var(--theme) 9%, #04080f);
+  background: color-mix(in srgb, var(--theme-bg) 9%, #04080f);
   color-scheme: dark;
-  transition: --theme 380ms ease;
+  transition: --theme-bg 400ms ease;
   font-synthesis: none;
   font-size: 12px;
   --theme: #ff5fd7;
+  --theme-bg: #ff5fd7;
   --lift: 0%;
   --cyan: color-mix(in srgb, white var(--lift), var(--theme));
-  --surface: color-mix(in srgb, var(--theme) 7%, #0b1622);
+  --surface: color-mix(in srgb, var(--theme-bg) 7%, #0b1622);
   --line: #345065;
   --muted: #b4c7d6;
   --amber: #ffbc4d;
@@ -24,6 +25,13 @@
   box-sizing: border-box;
 }
 @property --theme {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #ff5fd7;
+}
+/* --theme drives accents and switches instantly (no mid-hues such as amber between two
+   song colours); --theme-bg only tints the dark backgrounds and fades softly. */
+@property --theme-bg {
   syntax: "<color>";
   inherits: true;
   initial-value: #ff5fd7;
@@ -39,10 +47,10 @@ body {
   background:
     radial-gradient(
       120% 60% at 50% 0%,
-      color-mix(in srgb, var(--theme) 16%, transparent),
+      color-mix(in srgb, var(--theme-bg) 16%, transparent),
       transparent 70%
     ),
-    color-mix(in srgb, var(--theme) 8%, #050b14);
+    color-mix(in srgb, var(--theme-bg) 8%, #050b14);
 }
 main {
   max-width: 640px;
@@ -60,7 +68,7 @@ select {
   min-width: 44px;
   min-height: 44px;
   color: inherit;
-  background: color-mix(in srgb, var(--theme) 7%, #0f1c28);
+  background: color-mix(in srgb, var(--theme-bg) 7%, #0f1c28);
   border: 1px solid var(--line);
   border-radius: 8px;
 }
@@ -386,7 +394,7 @@ h2 {
 }
 .special-pad {
   border-radius: 12px;
-  background: color-mix(in srgb, var(--theme) 9%, #142533);
+  background: color-mix(in srgb, var(--theme-bg) 9%, #142533);
   border-color: #4c7188;
   height: 48px;
   min-height: 44px;
@@ -700,7 +708,7 @@ header {
     );
 }
 .lights-quiet .special-pad.firing {
-  background: color-mix(in srgb, var(--theme) 9%, #142533);
+  background: color-mix(in srgb, var(--theme-bg) 9%, #142533);
   border-color: #4c7188;
   color: #eff5fa;
   box-shadow: none;
@@ -723,7 +731,7 @@ header {
   position: relative;
   height: 44px;
   min-width: 44px;
-  padding: 3px 4px 3px 7px;
+  padding: 3px 7px;
   border-radius: 9px;
   border: 1px solid color-mix(in srgb, var(--song) 50%, var(--line));
   background: color-mix(in srgb, var(--song) 14%, #0a1520);
@@ -769,7 +777,8 @@ header {
   color: var(--song);
 }
 .song-swipe.queued {
-  border: 2px dashed var(--amber);
+  border: 1px dashed var(--amber);
+  box-shadow: inset 0 0 0 1px var(--amber);
 }
 .song-swipe.queued .song-cue,
 .song-swipe.queued .song-name {
@@ -819,7 +828,7 @@ header {
   width: 26px;
   height: 26px;
   border-radius: 13px;
-  background: color-mix(in srgb, var(--theme) 7%, #0f1c28);
+  background: color-mix(in srgb, var(--theme-bg) 7%, #0f1c28);
   border: 2px solid #4c6a80;
   font-size: 12px;
   color: #dce8ef;
@@ -890,4 +899,28 @@ header {
   .label-short {
     display: inline;
   }
+}
+/* Resting swipe hint: thin chevrons inside the side padding, no extra height. */
+.song-swipe::before,
+.song-swipe::after {
+  position: absolute;
+  top: 12px;
+  font-size: 13px;
+  line-height: 20px;
+  color: color-mix(in srgb, var(--song) 70%, #9fb2c0);
+  pointer-events: none;
+}
+.song-swipe::before {
+  content: "‹";
+  left: 1px;
+}
+.song-swipe::after {
+  content: "›";
+  right: 1px;
+}
+.song-swipe.previewing::before,
+.song-swipe.previewing::after,
+.song-swipe.canceling::before,
+.song-swipe.canceling::after {
+  content: none;
 }
