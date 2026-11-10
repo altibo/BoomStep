@@ -4,9 +4,7 @@ import {
   ribbonCancelled,
   orbitPosition,
   orbitPoint,
-  glideEntry,
 } from "./instrument-ui.js";
-import { SPECIALS } from "./specials.js";
 import { encodeWav } from "./wav.js";
 import "./style.css";
 import {
@@ -22,10 +20,16 @@ import {
 } from "./music.js";
 import { chordName, wrapSong } from "./songs.js";
 import { Engine, renderDiagnostic } from "./engine.js";
-import { xyPoint, releaseFX, panicSession } from "./fx.js";
-const padFlashes = new Map(),
-  ribbonGestures = new Map(),
-  glidePointers = new Map();
+import {
+  xyPoint,
+  releaseFX,
+  panicSession,
+  stutterSlice,
+  sliceName,
+  tapeSeconds,
+  crushBits,
+} from "./fx.js";
+const ribbonGestures = new Map();
 let refreshTimer;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 const app = document.querySelector("#app"),
@@ -45,10 +49,7 @@ const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
 <section id="performance" aria-label="Orbit Deck Performance">
-<header><h1 class="sr-only">BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="all-songs">Alle vier Spuren auf einen Song setzen</label><select id="all-songs"><option value="">ALLE AUF SONG…</option>${SONGS.map((p, i) => `<option value="${i}">${i + 1} ${p.name} – alle 4 Spuren</option>`).join("")}</select><span class="package-meta" id="pack-meta">${BPM} BPM · ${KEY}</span></div><label class="intensity-control" for="intensity"><span>KRASSHEIT <output id="intensity-value">0 Locker</output></span><input id="intensity" type="range" min="0" max="100" step="1" value="0" aria-label="Krassheit" aria-valuetext="0 Prozent, Locker"></label><button id="light-mode" aria-pressed="true" aria-label="Beat-Licht umschalten">LICHT<br><span>BEAT</span></button></header>
-<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="song-cell" data-songcell="${i}" role="group" aria-label="${name} Song: Taste links voriger, Taste rechts nächster Song, wechselt zum nächsten Takt; Pfeiltasten wechseln"><button class="song-step song-prev" data-step="-1" aria-label="${name}: voriger Song"><i aria-hidden="true">‹</i></button><div class="song-display"><span class="song-line" aria-hidden="true"><b class="track-label"><span class="label-long">${name}</span><span class="label-short">${name.slice(0, 2).toUpperCase()}</span></b> <span class="song-cue" id="song-cue-${i}"></span></span><span class="song-name" id="name-${i}" aria-live="polite"></span></div><button class="song-step song-next" data-step="1" aria-label="${name}: nächster Song"><i aria-hidden="true">›</i></button></div><div class="variant-slider" data-ribbon="${i}" role="slider" tabindex="0" aria-valuemin="1" aria-valuemax="4" aria-label="${name} Pattern-Regler, vier Stufen: ziehen wählt, loslassen merkt zum nächsten Takt vor; mehr als 24 Pixel nach oben oder unten verwirft; Pfeiltasten, Pos1 und Ende"><i class="slider-rail"></i><i class="slider-fill"></i>${PATTERN_NAMES[i].map((n, v) => `<span class="stop" data-track="${i}" data-variant="${v}" title="${n}"><b>${v + 1}</b></span>`).join("")}</div></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom"><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button>${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
-<div class="mix-strip" aria-label="Master und Special-Pegel"><section class="master" aria-label="Direkte Mastereffekte">${slider("M-FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section><div class="special-level">${slider("HITPEGEL", "specialLevel", session.specialLevel)}</div></div>
-<section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><div class="orbit-deck"><strong id="xy-label" class="sr-only">MASTER-ECHO</strong><div class="xy-axis">Farbe: dunkel ↔ hell</div><div class="orbit-visual"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
+<div class="global" aria-label="Takt und globale Regler"><div class="phase"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
   { length: 8 },
   (_, i) => {
     const a = orbitPoint(i / 8 + 0.014),
@@ -57,16 +58,20 @@ app.innerHTML = `<main>
   },
 ).join("")}</g><g class="orbit-numbers">${Array.from({ length: 8 }, (_, i) => {
   const p = orbitPoint((i + 0.5) / 8, 69);
-  return `<text x="${p.x}" y="${p.y + 3}">${i + 1}</text>`;
+  return `<text x="${p.x}" y="${p.y}" dominant-baseline="central">${i + 1}</text>`;
 }).join(
   "",
-)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: links rechts Klangfarbe, hoch Effektstärke" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div></div><div class="xy-depth" id="xy-hint">↑ Tiefe · loslassen neutral</div></div><div class="fx-right"><div class="fx-pads" role="group" aria-label="Master-Effektmodus"><button data-fx="echo">MASTER-ECHO</button><button data-fx="flanger">FLANGER</button><button data-fx="gate">GATE<span id="gate-label">1/8 (→1/16)</span></button><button data-fx="drive">DRIVE</button></div><div class="performance-status"><div id="orbit-status">Takt 1/8 · Akkord 1/4</div><div id="interaction-status" role="status">Pattern ziehen · Hits streichen</div></div></div></section>
-<section class="specials" aria-label="Einmalige Live-Specials"><h2 class="specials-caption">SPECIALS <small>Tippen / streichen · einmalig</small></h2><div class="special-pads" id="special-board" aria-label="Sechs Einmal-Pads: über Feldgrenzen streichen spielt je einen Hit, Halten wiederholt nicht">${SPECIALS.map((p) => `<button class="special-pad" data-special="${p.id}" aria-label="${p.name}, einmal abspielen">${p.name}</button>`).join("")}</div></section>
-<div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="save">SAVE</button><button id="stop" aria-label="Stop und Takt eins">■</button><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div>
+)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div class="phase-text"><div id="orbit-status"><b id="orbit-bar">Takt 1/8</b> <span id="orbit-chord">Akkord Fm</span></div><div id="interaction-status" role="status">Song ‹ › tippen</div></div></div>
+<header><h1 class="sr-only">BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="all-songs">Alle vier Spuren auf einen Song setzen</label><select id="all-songs"><option value="">ALLE AUF SONG…</option>${SONGS.map((p, i) => `<option value="${i}">${i + 1} ${p.name} – alle 4 Spuren</option>`).join("")}</select><span class="package-meta" id="pack-meta">${BPM} BPM · ${KEY}</span></div><label class="intensity-control" for="intensity"><span>KRASSHEIT <output id="intensity-value">0 Locker</output></span><input id="intensity" type="range" min="0" max="100" step="1" value="0" aria-label="Krassheit" aria-valuetext="0 Prozent, Locker"></label><button id="light-mode" aria-pressed="true" aria-label="Beat-Licht umschalten">LICHT<br><span>BEAT</span></button></header>
+<section class="master" aria-label="Direkte Mastereffekte">${slider("M-FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
+<div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="stop" aria-label="Stop und Takt eins">■</button></div></div>
+<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="song-cell" data-songcell="${i}" role="group" aria-label="${name} Song: Taste links voriger, Taste rechts nächster Song, wechselt zum nächsten Takt; Pfeiltasten wechseln"><button class="song-step song-prev" data-step="-1" aria-label="${name}: voriger Song"><i aria-hidden="true">‹</i></button><div class="song-display"><span class="song-line" aria-hidden="true"><b class="track-label"><span class="label-long">${name}</span><span class="label-short">${name.slice(0, 2).toUpperCase()}</span></b> <span class="song-cue" id="song-cue-${i}"></span></span><span class="song-name" id="name-${i}" aria-live="polite"></span></div><button class="song-step song-next" data-step="1" aria-label="${name}: nächster Song"><i aria-hidden="true">›</i></button></div><div class="variant-slider" data-ribbon="${i}" role="slider" tabindex="0" aria-valuemin="1" aria-valuemax="4" aria-label="${name} Pattern-Regler, vier Stufen: ziehen wählt, loslassen merkt zum nächsten Takt vor; mehr als 24 Pixel nach oben oder unten verwirft; Pfeiltasten, Pos1 und Ende"><i class="slider-rail"></i><i class="slider-fill"></i>${PATTERN_NAMES[i].map((n, v) => `<span class="stop" data-track="${i}" data-variant="${v}" title="${n}"><b>${v + 1}</b></span>`).join("")}</div></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom"><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button>${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
+
+<div class="fxcol" aria-label="Performance-Effekte und XY-Feld"><div class="fx-pads" role="group" aria-label="XY-Effekt wählen"><button data-fx="stutter" class="fx-stutter" aria-label="Stutter: Beat-Repeat im Taktraster">STUTTER<span id="stutter-label">1/16</span></button><button data-fx="echo" aria-label="Master-Echo">ECHO</button><button data-fx="flanger">FLANGER</button><button data-fx="gate" aria-label="Gate, nochmals tippen wechselt 1/8 und 1/16">GATE<span id="gate-label">1/8</span></button><button data-fx="drive">DRIVE</button><button data-fx="tape" aria-label="Tape-Stop: Bremse bis Stillstand">TAPE<span>STOP</span></button><button data-fx="crush" aria-label="Bitcrush">CRUSH<span id="crush-label">5 Bit</span></button></div><div class="fx-hold"><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div><div class="xy-wrap"><strong id="xy-label" class="sr-only">STUTTER</strong><div class="xy-axis" id="xy-axis">X: Slice 1/8 · 1/16 · 1/32</div><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: Achsen je nach Effekt, siehe Beschriftung" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div><div class="xy-depth" id="xy-hint">↑ Mix · loslassen neutral</div></div></div>
 </section>
 <div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
-<div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>KRASSHEIT:</b> 0 = dein unveränderter Grundmix. Mehr Krassheit ergänzt Sättigung, Kickkante, Klanghelligkeit und Pump; ab 25/50 zusätzliche Hats/Percussion, ab 55 Riff-Antworten, ab 75 kurze Grid-Ratchets im achten Takt. Keine Tempo-, Tonart- oder Patternwechsel. Deine Fader bleiben Baselines, nicht überschrieben. Klangregler gleiten in 25ms; neue Noten folgen dem Grid nach maximal 100ms Planungsvorlauf. FX AUS setzt auch Krassheit auf 0, Lautstärken/Patterns bleiben. LICHT schaltet Beat/Ruhig; System-Reduced-Motion erzwingt ruhig. Nur lokaler, weicher Audiozeit-Glow, maximal 3 Pulse/s, keine Vollbildblitze. Bei Pause keine Beatpulse. Lichtwahl wird lokal und mit der Session gespeichert.</p><p class="reset-help">FX AUS: Krassheit 0, Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>SONG TIPPEN:</b> Jede Spur wählt ihren Song selbst. Das Songfeld hat drei Zonen: Taste › rechts = nächster Song, Taste ‹ links = vorheriger (Liste ist ringförmig); die Mitte zeigt nur Spur, Status und Songname. Der Wechsel wird für den nächsten Takt vorgemerkt (Amber gestrichelt, „→ ab Tn“); das Feld zeigt sofort Name und Farbe des Ziel-Songs, die Oberfläche nimmt sofort dessen Farbe an. Mehrfach tippen zählt vom vorgemerkten Ziel weiter; zurück auf den laufenden Song tippen hebt die Vormerkung auf. Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Pfeiltasten im fokussierten Songfeld wählen den Nachbarsong, Home/End den ersten/letzten. Keine Hörvorschau.</p><p><b>QUERFORMAT:</b> Handy quer halten ist das Hauptlayout: links die vier Spuren, rechts Songwahl für alle, Krassheit, Licht, Master, FX, Transport, Specials und unten rechts das XY-Feld. Im Hochformat bleibt alles untereinander bedienbar (mit Scrollen).</p><p><b>OBERFLÄCHENFARBE:</b> Die App nimmt die Farbe des Songs an, der zuletzt per Tippen (oder Tastatur) auf einer Spur gewählt wurde – auch schon, solange er vorgemerkt ist. Beim Start und nach „ALLE AUF SONG…“ führt die Drums-Spur. Die Spur mit der führenden Farbe trägt eine helle Kante. Amber bleibt ausschließlich „vorgemerkt“, Rot ausschließlich Aufnahme; kein Song verwendet diese Farbtöne. Akzentfarben wechseln sofort (keine Zwischentöne wie Amber), nur die dunkle Hintergrundtönung blendet in 0,4s weich über; mit reduzierter Bewegung alles sofort.</p><p><b>PATTERNREGLER:</b> Vier Rastpunkte pro Spur. Tippen oder Ziehen wählt; Ziehen markiert nur eine Auswahl, erst Loslassen merkt die Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Regler ziehen, Escape oder Systemabbruch verwerfen. Pfeiltasten wählen die Nachbarvariante, Home/End die erste/letzte. Auf Regler, XY und Specials ist Scrollen zugunsten der Geste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Im Hochformat liegt das XY-Feld im Ring; im Querformat zeigt ein kleiner Ring (ohne Ziffern, Takt steht daneben) die Phase und das große XY-Feld liegt unten rechts für den rechten Daumen.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. HITPEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p><b>SONGS:</b> Zehn eigene dunkle Bouncy-Techno-Stücke, alle mit 150 BPM in F-Moll. Die Bass-Spur bestimmt die gemeinsame Akkordfolge; alle tonalen Spuren sind in Skalenstufen relativ zu diesem Akkord geschrieben, daher bleibt jede Song-Mischung harmonisch. Klang aus gesampelten CC0-Instrumenten (TR-808, FreePats-Bässe, Pads, E-Piano, Hang, Brass); nur der UP-SWEEP ist synthetisches Rauschen. Keine fremden Songs, Melodien, Vocals oder Künstlerstimmen kopiert. Quellen und Lizenzen: samples/CREDITS.txt.</p><p>M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Die gemeinsame Reglerzeile enthält M-FILTER, Hall, Drive, Pump und HITPEGEL. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. ALLE AUF SONG… setzt alle vier Spuren zum nächsten Takt auf einen Song (Mix bleibt). Alte Sessions behalten Mix, Patterns und Effekte; ihr entferntes Paket wird auf einen festen neuen Song abgebildet.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Alle Samples (ca. 8 MB) werden beim ersten Laden für offline gespeichert. Keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · CC0-Samples</footer></main>`;
+<div class="secondary"><button id="save">Speichern</button><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
+<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>KRASSHEIT:</b> 0 = dein unveränderter Grundmix. Mehr Krassheit ergänzt Sättigung, Kickkante, Klanghelligkeit und Pump; ab 25/50 zusätzliche Hats/Percussion, ab 55 Riff-Antworten, ab 75 kurze Grid-Ratchets im achten Takt. Keine Tempo-, Tonart- oder Patternwechsel. Deine Fader bleiben Baselines, nicht überschrieben. Klangregler gleiten in 25ms; neue Noten folgen dem Grid nach maximal 100ms Planungsvorlauf. FX AUS setzt auch Krassheit auf 0, Lautstärken/Patterns bleiben. LICHT schaltet Beat/Ruhig; System-Reduced-Motion erzwingt ruhig. Nur lokaler, weicher Audiozeit-Glow, maximal 3 Pulse/s, keine Vollbildblitze. Bei Pause keine Beatpulse. Lichtwahl wird lokal und mit der Session gespeichert.</p><p class="reset-help">FX AUS: Krassheit 0, Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>SONG TIPPEN:</b> Jede Spur wählt ihren Song selbst. Das Songfeld hat drei Zonen: Taste › rechts = nächster Song, Taste ‹ links = vorheriger (Liste ist ringförmig); die Mitte zeigt nur Spur, Status und Songname. Der Wechsel wird für den nächsten Takt vorgemerkt (Amber gestrichelt, „→ ab Tn“); das Feld zeigt sofort Name und Farbe des Ziel-Songs, die Oberfläche nimmt sofort dessen Farbe an. Mehrfach tippen zählt vom vorgemerkten Ziel weiter; zurück auf den laufenden Song tippen hebt die Vormerkung auf. Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Pfeiltasten im fokussierten Songfeld wählen den Nachbarsong, Home/End den ersten/letzten. Keine Hörvorschau.</p><p><b>QUERFORMAT:</b> Handy quer halten ist das Hauptlayout: links oben die Taktanzeige (Ring, Takt, Akkord, Vormerkungen), darunter alle global wirkenden Regler (Songwahl für alle, Krassheit, Licht, M-Filter, Hall, Drive, Pump) und PLAY/REC/Stop; in der Mitte die vier Spuren als Block; rechts die Effektwahl, HOLD/FX AUS und unten rechts das XY-Feld für den rechten Daumen. Im Hochformat stehen dieselben Teile untereinander.</p><p><b>OBERFLÄCHENFARBE:</b> Die App nimmt die Farbe des Songs an, der zuletzt per Tippen (oder Tastatur) auf einer Spur gewählt wurde – auch schon, solange er vorgemerkt ist. Beim Start und nach „ALLE AUF SONG…“ führt die Drums-Spur. Die Spur mit der führenden Farbe trägt eine helle Kante. Amber bleibt ausschließlich „vorgemerkt“, Rot ausschließlich Aufnahme; kein Song verwendet diese Farbtöne. Akzentfarben wechseln sofort (keine Zwischentöne wie Amber), nur die dunkle Hintergrundtönung blendet in 0,4s weich über; mit reduzierter Bewegung alles sofort.</p><p><b>PATTERNREGLER:</b> Vier Rastpunkte pro Spur. Tippen oder Ziehen wählt; Ziehen markiert nur eine Auswahl, erst Loslassen merkt die Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Regler ziehen, Escape oder Systemabbruch verwerfen. Pfeiltasten wählen die Nachbarvariante, Home/End die erste/letzte. Auf Regler und XY ist Scrollen zugunsten der Geste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Daneben stehen Takt und Akkord in großer Schrift, darunter die aktuelle Vormerkung.</p><p><b>SONGS:</b> Zehn eigene dunkle Bouncy-Techno-Stücke, alle mit 150 BPM in F-Moll. Die Bass-Spur bestimmt die gemeinsame Akkordfolge; alle tonalen Spuren sind in Skalenstufen relativ zu diesem Akkord geschrieben, daher bleibt jede Song-Mischung harmonisch. Klang aus gesampelten CC0-Instrumenten (TR-808, FreePats-Bässe, Pads, E-Piano, Hang, Brass). Keine fremden Songs, Melodien, Vocals oder Künstlerstimmen kopiert. Quellen und Lizenzen: samples/CREDITS.txt.</p><p>M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel.</p><p><b>XY-EFFEKTE:</b> Effekt oben rechts wählen, dann im XY-Feld ziehen; die Beschriftung am Feld nennt die Achsen. <b>STUTTER</b> = Beat-Repeat: zu Beginn jedes Beats wird eine Scheibe des Master-Audios aufgenommen und bis zum Beatende wiederholt, X wählt 1/8, 1/16 oder 1/32, Y den Anteil (Mix); quantisiert auf die Audiouhr, 2-ms-Blenden an jeder Wiederholung. <b>TAPE-STOP</b> bremst den Mix ab dem nächsten 16tel wie ein Bandlaufwerk bis zum Stillstand (X: Bremsdauer, Y: Anteil); loslassen startet sofort wieder. <b>CRUSH</b> reduziert die Bittiefe (X: 8 bis 2 Bit, Y: Anteil). ECHO, FLANGER, GATE und DRIVE: X = Farbe (links dunkler Tiefpass, rechts schneidender Hochpass), Y = Effektmenge; GATE erneut tippen wechselt 1/8 ↔ 1/16. Loslassen = neutral; HOLD hält die letzte Position, HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern X/Y; Escape = FX AUS. Alle Effekte liegen vor dem Schutzlimiter und sind in der Aufnahme enthalten.</p><p>Die globalen Regler M-FILTER, Hall, Drive und Pump wirken auf den ganzen Mix. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die sieben Effekttasten verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SPEICHERN (unter der Bühne, neben Öffnen) speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. ALLE AUF SONG… setzt alle vier Spuren zum nächsten Takt auf einen Song (Mix bleibt). Alte Sessions behalten Mix, Patterns und Effekte; ihr entferntes Paket wird auf einen festen neuen Song abgebildet.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Alle Samples (ca. 8 MB) werden beim ersten Laden für offline gespeichert. Keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · CC0-Samples</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -156,11 +161,10 @@ function refresh() {
     })
     .join("");
   const harmony = harmonyOf(pos.choices);
-  $("#orbit-status").textContent =
-    `Takt ${orbit.bar + 1}/8 · Akkord ${chordName(harmony, orbit.bar * 16)}`;
-  if (engine.recording)
-    $("#orbit-status").textContent =
-      `Takt ${orbit.bar + 1}/8 · REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`;
+  $("#orbit-bar").textContent = `Takt ${orbit.bar + 1}/8`;
+  $("#orbit-chord").textContent = engine.recording
+    ? `REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`
+    : `Akkord ${chordName(harmony, orbit.bar * 16)}`;
   $("#orbit").setAttribute(
     "aria-label",
     `Gemeinsame Phase: Takt ${orbit.bar + 1} von 8, Akkord ${chordName(harmony, orbit.bar * 16)} aus der Bass-Spur (${SONGS[harmony].name}), Beat ${orbit.beat}${waiting.length ? `, ${waiting.length} vorgemerkte Wechsel an Takt ${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}. Anzeige, kein Seek.`,
@@ -279,8 +283,7 @@ function refresh() {
       engine.clock.pending.size === 1
         ? `${TRACKS[track]}: ${SONGS[q.song].name} ${q.variant + 1} ab Takt ${Math.floor((q.at % 128) / 16) + 1}`
         : `${engine.clock.pending.size} Wechsel ab Takt ${Math.floor((q.at % 128) / 16) + 1}`;
-  } else
-    $("#interaction-status").textContent = "Song ‹ › tippen · Hits streichen";
+  } else $("#interaction-status").textContent = "Song ‹ › tippen";
   document
     .querySelectorAll("[data-fx]")
     .forEach((el) =>
@@ -289,27 +292,30 @@ function refresh() {
         String(el.dataset.fx === session.fx.mode),
       ),
     );
-  document.querySelectorAll("[data-special]").forEach((el) => {
-    const active =
-      (padFlashes.get(el.dataset.special) || 0) > performance.now() ||
-      engine.specialGroups.some((g) => g.id === el.dataset.special);
-    el.classList.toggle("firing", active);
-  });
   $("#hold").setAttribute("aria-pressed", String(session.fx.hold));
   $("#xy").classList.toggle("held", session.fx.hold);
-  $("#xy-label").textContent =
-    session.fx.mode === "gate"
-      ? `GATE 1/${session.fx.division}`
-      : session.fx.mode === "echo"
-        ? "MASTER-ECHO"
-        : session.fx.mode === "flanger"
-          ? "FLANGER"
-          : session.fx.mode.toUpperCase();
-  $("#xy-hint").textContent = session.fx.hold
-    ? "↑ Tiefe · HOLD hält"
-    : "↑ Tiefe · loslassen neutral";
-  $("#gate-label").textContent =
-    `1/${session.fx.division} (→1/${session.fx.division === 8 ? 16 : 8})`;
+  const f = session.fx,
+    slice = sliceName(stutterSlice(f.x));
+  const axes = {
+    stutter: ["STUTTER", `X: Slice 1/8 · 1/16 · 1/32 (${slice})`, "Mix"],
+    echo: ["MASTER-ECHO", "X: Farbe dunkel ↔ hell", "Echo"],
+    flanger: ["FLANGER", "X: Farbe dunkel ↔ hell", "Flanger"],
+    gate: [`GATE 1/${f.division}`, "X: Farbe dunkel ↔ hell", "Gate"],
+    drive: ["DRIVE", "X: Farbe dunkel ↔ hell", "Drive"],
+    tape: [
+      "TAPE-STOP",
+      `X: Bremse kurz ↔ lang (${tapeSeconds(f.x, (60 / BPM) * 1).toFixed(1)} s)`,
+      "Mix",
+    ],
+    crush: ["CRUSH", `X: Bits 8 ↔ 2 (${crushBits(f.x)} Bit)`, "Mix"],
+  }[f.mode];
+  $("#xy-label").textContent = axes[0];
+  $("#xy-axis").textContent = axes[1];
+  $("#xy-hint").textContent =
+    `↑ ${axes[2]} · ${f.hold ? "HOLD hält" : "loslassen neutral"}`;
+  $("#gate-label").textContent = `1/${f.division}`;
+  $("#stutter-label").textContent = slice;
+  $("#crush-label").textContent = `${crushBits(f.x)} Bit`;
   $("#xy-dot").style.left = `${14 + session.fx.x * 72}%`;
   $("#xy-dot").style.top = `${14 + (1 - session.fx.depth) * 72}%`;
   $("#xy").setAttribute(
@@ -318,14 +324,10 @@ function refresh() {
   );
   $("#xy").setAttribute(
     "aria-valuetext",
-    `${session.fx.mode}, Tiefe ${Math.round(session.fx.depth * 100)} Prozent, Farbe ${Math.round(session.fx.x * 100)} Prozent`,
+    `${axes[0]}, ${axes[2]} ${Math.round(session.fx.depth * 100)} Prozent, ${axes[1]}`,
   );
   // One bounded paint timer while audio/finite flashes need it; none while idle.
-  const moving =
-    engine.running ||
-    engine.recording ||
-    engine.specialGroups.length ||
-    [...padFlashes.values()].some((t) => t > performance.now());
+  const moving = engine.running || engine.recording;
   if (moving && !refreshTimer)
     refreshTimer = setTimeout(() => {
       refreshTimer = null;
@@ -392,7 +394,6 @@ $("#stop").onclick = () =>
 app.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
-  if (b.dataset.special && e.detail === 0) triggerPad(b.dataset.special);
   for (const key of ["mute", "solo"])
     if (b.dataset[key] !== undefined) {
       const i = Number(b.dataset[key]);
@@ -406,17 +407,6 @@ app.addEventListener("click", (e) => {
     updateFX();
   }
 });
-function triggerPad(id) {
-  padFlashes.set(id, performance.now() + 180);
-  refresh();
-  void engine
-    .triggerSpecial(id)
-    .then(() => refresh())
-    .catch((e) => {
-      notice(e.message);
-      console.error(e);
-    });
-}
 // Independent per-track captures: simultaneous drags do not steal another lane.
 for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
   const track = Number(ribbon.dataset.ribbon);
@@ -530,34 +520,6 @@ document.addEventListener(
   },
   true,
 );
-const board = $("#special-board");
-function glide(e) {
-  const state = glidePointers.get(e.pointerId);
-  if (!state) return;
-  const hit = document
-    .elementFromPoint(e.clientX, e.clientY)
-    ?.closest("[data-special]");
-  const id = hit && board.contains(hit) ? hit.dataset.special : null;
-  const next = glideEntry(state.last, id);
-  state.last = next.current;
-  if (next.trigger) triggerPad(id);
-}
-board.onpointerdown = (e) => {
-  if (e.button !== 0) return;
-  e.preventDefault();
-  glidePointers.set(e.pointerId, { last: null });
-  board.setPointerCapture(e.pointerId);
-  glide(e);
-};
-board.onpointermove = glide;
-const endGlide = (e) => {
-  glidePointers.delete(e.pointerId);
-  if (board.hasPointerCapture(e.pointerId))
-    board.releasePointerCapture(e.pointerId);
-};
-board.onpointerup = endGlide;
-board.onpointercancel = endGlide;
-board.onlostpointercapture = endGlide;
 app.addEventListener("input", (e) => {
   const { key, strip } = e.target.dataset;
   if (!key) return;
@@ -672,8 +634,6 @@ async function restore(value) {
   if (engine.recording) throw new Error("Bitte zuerst Aufnahme beenden.");
   const next = validateSession(value);
   ribbonGestures.clear();
-  glidePointers.clear();
-  padFlashes.clear();
   await engine.dispose();
   session = next;
   engine = new Engine(session, refresh);
@@ -732,7 +692,6 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     activePointer = null;
     ribbonGestures.clear();
-    glidePointers.clear();
     session.fx.hold = false;
     release();
     if (engine.running)
