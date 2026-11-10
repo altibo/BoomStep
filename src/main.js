@@ -61,7 +61,7 @@ app.innerHTML = `<main>
   return `<text x="${p.x}" y="${p.y}" dominant-baseline="central">${i + 1}</text>`;
 }).join(
   "",
-)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div class="phase-text"><div id="orbit-status"><b id="orbit-bar">Takt 1/8</b> <span id="orbit-chord">Akkord Fm</span></div><div id="interaction-status" role="status">Song ‹ › tippen</div></div></div>
+)}</g><g id="orbit-pending"></g><circle id="orbit-head" r="4" cx="80" cy="11"/></svg><div class="phase-text"><div id="orbit-status"><b id="orbit-bar">Takt 1/8</b> <span id="orbit-chord">Akkord Fm</span></div><div id="interaction-status" role="status">Song ‹ › tippen</div><div id="phase-notice" aria-hidden="true"></div></div></div>
 <header><h1 class="sr-only">BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="all-songs">Alle vier Spuren auf einen Song setzen</label><select id="all-songs"><option value="">ALLE AUF SONG…</option>${SONGS.map((p, i) => `<option value="${i}">${i + 1} ${p.name} – alle 4 Spuren</option>`).join("")}</select><span class="package-meta" id="pack-meta">${BPM} BPM · ${KEY}</span></div><label class="intensity-control" for="intensity"><span>KRASSHEIT <output id="intensity-value">0 Locker</output></span><input id="intensity" type="range" min="0" max="100" step="1" value="0" aria-label="Krassheit" aria-valuetext="0 Prozent, Locker"></label><button id="light-mode" aria-pressed="true" aria-label="Beat-Licht umschalten">LICHT<br><span>BEAT</span></button></header>
 <section class="master" aria-label="Direkte Mastereffekte">${slider("M-FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section>
 <div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="stop" aria-label="Stop und Takt eins">■</button></div></div>
@@ -72,8 +72,17 @@ app.innerHTML = `<main>
 <div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="save">Speichern</button><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
 <div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>KRASSHEIT:</b> 0 = dein unveränderter Grundmix. Mehr Krassheit ergänzt Sättigung, Kickkante, Klanghelligkeit und Pump; ab 25/50 zusätzliche Hats/Percussion, ab 55 Riff-Antworten, ab 75 kurze Grid-Ratchets im achten Takt. Keine Tempo-, Tonart- oder Patternwechsel. Deine Fader bleiben Baselines, nicht überschrieben. Klangregler gleiten in 25ms; neue Noten folgen dem Grid nach maximal 100ms Planungsvorlauf. FX AUS setzt auch Krassheit auf 0, Lautstärken/Patterns bleiben. LICHT schaltet Beat/Ruhig; System-Reduced-Motion erzwingt ruhig. Nur lokaler, weicher Audiozeit-Glow, maximal 3 Pulse/s, keine Vollbildblitze. Bei Pause keine Beatpulse. Lichtwahl wird lokal und mit der Session gespeichert.</p><p class="reset-help">FX AUS: Krassheit 0, Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>SONG TIPPEN:</b> Jede Spur wählt ihren Song selbst. Das Songfeld hat drei Zonen: Taste › rechts = nächster Song, Taste ‹ links = vorheriger (Liste ist ringförmig); die Mitte zeigt nur Spur, Status und Songname. Der Wechsel wird für den nächsten Takt vorgemerkt (Amber gestrichelt, „→ ab Tn“); das Feld zeigt sofort Name und Farbe des Ziel-Songs, die Oberfläche nimmt sofort dessen Farbe an. Mehrfach tippen zählt vom vorgemerkten Ziel weiter; zurück auf den laufenden Song tippen hebt die Vormerkung auf. Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Pfeiltasten im fokussierten Songfeld wählen den Nachbarsong, Home/End den ersten/letzten. Keine Hörvorschau.</p><p><b>QUERFORMAT:</b> Handy quer halten ist das Hauptlayout: links oben die Taktanzeige (Ring, Takt, Akkord, Vormerkungen), darunter alle global wirkenden Regler (Songwahl für alle, Krassheit, Licht, M-Filter, Hall, Drive, Pump) und PLAY/REC/Stop; in der Mitte die vier Spuren als Block; rechts die Effektwahl, HOLD/FX AUS und unten rechts das XY-Feld für den rechten Daumen. Im Hochformat stehen dieselben Teile untereinander.</p><p><b>OBERFLÄCHENFARBE:</b> Die App nimmt die Farbe des Songs an, der zuletzt per Tippen (oder Tastatur) auf einer Spur gewählt wurde – auch schon, solange er vorgemerkt ist. Beim Start und nach „ALLE AUF SONG…“ führt die Drums-Spur. Die Spur mit der führenden Farbe trägt eine helle Kante. Amber bleibt ausschließlich „vorgemerkt“, Rot ausschließlich Aufnahme; kein Song verwendet diese Farbtöne. Akzentfarben wechseln sofort (keine Zwischentöne wie Amber), nur die dunkle Hintergrundtönung blendet in 0,4s weich über; mit reduzierter Bewegung alles sofort.</p><p><b>PATTERNREGLER:</b> Vier Rastpunkte pro Spur. Tippen oder Ziehen wählt; Ziehen markiert nur eine Auswahl, erst Loslassen merkt die Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Regler ziehen, Escape oder Systemabbruch verwerfen. Pfeiltasten wählen die Nachbarvariante, Home/End die erste/letzte. Auf Regler und XY ist Scrollen zugunsten der Geste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Daneben stehen Takt und Akkord in großer Schrift, darunter die aktuelle Vormerkung.</p><p><b>SONGS:</b> Zehn eigene dunkle Bouncy-Techno-Stücke, alle mit 150 BPM in F-Moll. Die Bass-Spur bestimmt die gemeinsame Akkordfolge; alle tonalen Spuren sind in Skalenstufen relativ zu diesem Akkord geschrieben, daher bleibt jede Song-Mischung harmonisch. Klang aus gesampelten CC0-Instrumenten (TR-808, FreePats-Bässe, Pads, E-Piano, Hang, Brass). Keine fremden Songs, Melodien, Vocals oder Künstlerstimmen kopiert. Quellen und Lizenzen: samples/CREDITS.txt.</p><p>M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel.</p><p><b>XY-EFFEKTE:</b> Effekt oben rechts wählen, dann im XY-Feld ziehen; die Beschriftung am Feld nennt die Achsen. <b>STUTTER</b> = Beat-Repeat: zu Beginn jedes Beats wird eine Scheibe des Master-Audios aufgenommen und bis zum Beatende wiederholt, X wählt 1/8, 1/16 oder 1/32, Y den Anteil (Mix); quantisiert auf die Audiouhr, 2-ms-Blenden an jeder Wiederholung. <b>TAPE-STOP</b> bremst den Mix ab dem nächsten 16tel wie ein Bandlaufwerk bis zum Stillstand (X: Bremsdauer, Y: Anteil); loslassen startet sofort wieder. <b>CRUSH</b> reduziert die Bittiefe (X: 8 bis 2 Bit, Y: Anteil). ECHO, FLANGER, GATE und DRIVE: X = Farbe (links dunkler Tiefpass, rechts schneidender Hochpass), Y = Effektmenge; GATE erneut tippen wechselt 1/8 ↔ 1/16. Loslassen = neutral; HOLD hält die letzte Position, HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern X/Y; Escape = FX AUS. Alle Effekte liegen vor dem Schutzlimiter und sind in der Aufnahme enthalten.</p><p>Die globalen Regler M-FILTER, Hall, Drive und Pump wirken auf den ganzen Mix. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die sieben Effekttasten verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SPEICHERN (unter der Bühne, neben Öffnen) speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. ALLE AUF SONG… setzt alle vier Spuren zum nächsten Takt auf einen Song (Mix bleibt). Alte Sessions behalten Mix, Patterns und Effekte; ihr entferntes Paket wird auf einen festen neuen Song abgebildet.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Alle Samples (ca. 8 MB) werden beim ersten Laden für offline gespeichert. Keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · CC0-Samples</footer></main>`;
-function notice(text) {
+// Full text in #notice (status for screen readers, in-flow below the music in portrait).
+// In landscape it is shown briefly inside the bar display instead of as an overlay, so it
+// never covers a control; `short` is the compact wording for that narrow column.
+let noticeTimer;
+function notice(text, short = text) {
   $("#notice").textContent = text;
+  const p = $("#phase-notice");
+  p.textContent = short;
+  p.classList.toggle("rec", /^REC|Aufnahme/.test(short));
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => (p.textContent = ""), 4000);
 }
 function syncSliders() {
   document.querySelectorAll("input[data-key]").forEach((el) => {
@@ -162,6 +171,7 @@ function refresh() {
     .join("");
   const harmony = harmonyOf(pos.choices);
   $("#orbit-bar").textContent = `Takt ${orbit.bar + 1}/8`;
+  $("#orbit-chord").classList.toggle("rec", engine.recording);
   $("#orbit-chord").textContent = engine.recording
     ? `REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`
     : `Akkord ${chordName(harmony, orbit.bar * 16)}`;
@@ -604,6 +614,7 @@ function connectRecording() {
       limit
         ? "120 Audiosekunden erreicht. WAV bereit."
         : "Dein echter Live-Mix ist als WAV bereit.",
+      "WAV bereit",
     );
   };
 }
@@ -613,7 +624,10 @@ $("#record").onclick = () =>
     if (engine.recording) await engine.stopRecording();
     else {
       await engine.startRecording();
-      notice("REC · Alle Patternwechsel, Mutes und FX werden aufgenommen.");
+      notice(
+        "REC · Alle Patternwechsel, Mutes und FX werden aufgenommen.",
+        "Aufnahme läuft",
+      );
     }
   });
 function snapshot() {

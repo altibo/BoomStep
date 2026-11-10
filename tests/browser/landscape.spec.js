@@ -231,21 +231,6 @@ test("landscape 844×390 is fully playable: song tap, pattern, STUTTER tile + XY
   await page.mouse.up();
   expect(await page.evaluate(() => window.boomstep.session.fx.depth)).toBe(0);
   await expect(page.locator("#record")).toBeInViewport();
-  // the REC toast never covers PLAY/REC/Stop or the XY pad
-  await page.locator("#record").click();
-  await expect(page.locator("#notice")).not.toBeEmpty();
-  const hidden = await page.evaluate(() => {
-    const n = document.querySelector("#notice").getBoundingClientRect();
-    return [".transport", "#xy"].filter((s) => {
-      const b = document.querySelector(s).getBoundingClientRect();
-      return (
-        Math.min(n.right, b.right) > Math.max(n.left, b.left) &&
-        Math.min(n.bottom, b.bottom) > Math.max(n.top, b.top)
-      );
-    });
-  });
-  expect(hidden).toEqual([]);
-  await page.locator("#record").click();
   await expect(page.locator("#xy")).toBeInViewport({ ratio: 1 });
 });
 
@@ -271,3 +256,68 @@ test("desktop landscape 1280×720 stays tidy and portrait 390×844 keeps the sta
   expect(p.perf.bottom).toBeLessThanOrEqual(822);
   await page.screenshot({ path: `${out}/portrait-390x844.png` });
 });
+
+// Review 4.3 blocker: the REC notice must never cover a musical control, in any viewport.
+for (const [w, h] of [...VIEWPORTS, [390, 844], [320, 568]])
+  test(`REC notice ${w}×${h} covers no interactive element`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/");
+    await page.locator("#record").click();
+    await expect(page.locator("#notice")).toContainText("REC");
+    const r = await page.evaluate(() => {
+      const shown = [...document.querySelectorAll("#notice, #phase-notice")]
+        .map((e) => ({
+          id: e.id,
+          b: e.getBoundingClientRect(),
+          text: e.textContent,
+        }))
+        .filter((n) => n.b.width > 2 && n.b.height > 2);
+      const controls = [
+        ...document.querySelectorAll(
+          "button, input, select, a[href], [role=slider], [tabindex='0']",
+        ),
+      ].filter((e) => e.getClientRects().length && !e.hidden);
+      const hits = [];
+      for (const n of shown)
+        for (const c of controls) {
+          const b = c.getBoundingClientRect();
+          if (
+            Math.min(n.b.right, b.right) - Math.max(n.b.left, b.left) > 0.5 &&
+            Math.min(n.b.bottom, b.bottom) - Math.max(n.b.top, b.top) > 0.5
+          )
+            hits.push(`${n.id} × ${c.id || c.className || c.tagName}`);
+        }
+      const phase = document.querySelector(".phase").getBoundingClientRect(),
+        p = document.querySelector("#phase-notice");
+      return {
+        hits,
+        shown: shown.map((n) => n.id),
+        phaseNotice: p.textContent,
+        insidePhase: shown
+          .filter((n) => n.id === "phase-notice")
+          .every(
+            (n) =>
+              n.b.bottom <= phase.bottom + 0.5 &&
+              n.b.right <= phase.right + 0.5,
+          ),
+        clipped: p.scrollHeight > p.clientHeight + 1,
+        chordRed: getComputedStyle(document.querySelector("#orbit-chord"))
+          .color,
+      };
+    });
+    console.log(`REC notice ${w}x${h}`, JSON.stringify(r));
+    expect(r.hits).toEqual([]);
+    expect(r.insidePhase).toBe(true);
+    if (w > h) {
+      // landscape: shown inside the bar display, red, plus REC seconds under "Takt x/8"
+      expect(r.shown).toEqual(["phase-notice"]);
+      expect(r.phaseNotice).toBe("Aufnahme läuft");
+      expect(r.clipped).toBe(false);
+      expect(r.chordRed).toBe("rgb(255, 99, 122)");
+    } else expect(r.shown).toContain("notice");
+    await expect(page.locator("#orbit-chord")).toContainText("REC");
+    await page.screenshot({ path: `${out}/rec-${w}x${h}.png` });
+    await page.locator("#record").click();
+  });

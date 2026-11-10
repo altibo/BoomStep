@@ -1093,19 +1093,20 @@ header {
        by main padding) and 8px air towards the FX keys above */
     margin: 0 23px 12px 0;
   }
-  #notice:not(:empty) {
-    /* over the bottom of the track block, never over PLAY/REC or the XY pad; taps pass */
-    position: fixed;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: max(4px, env(safe-area-inset-bottom));
-    z-index: 5;
-    max-width: min(44%, 420px);
-    padding: 4px 8px;
-    border-radius: 8px;
-    background: #0b1622ee;
-    border: 1px solid var(--line);
-    pointer-events: none;
+  /* notices appear inside the bar display (#phase-notice), never as an overlay */
+  #notice {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    margin: 0;
+  }
+  #phase-notice:not(:empty) {
+    display: -webkit-box;
+  }
+  .phase-text:has(#phase-notice:not(:empty)) #interaction-status {
+    display: none;
   }
 }
 /* Wide right column: STUTTER spans two of four columns, two rows of keys. */
@@ -1135,4 +1136,21 @@ header {
   .track {
     padding: 0 3px;
   }
+}
+
+#phase-notice {
+  display: none;
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 700;
+  color: #d5eaf4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+}
+#phase-notice.rec,
+#orbit-chord.rec {
+  color: var(--red, #ff637a);
+  font-weight: 800;
 }
