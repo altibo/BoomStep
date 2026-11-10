@@ -143,11 +143,19 @@ export class Engine {
     this.tapeMix.connect(this.tapeOut);
     // Beat repeat: capture a slice into a delay line, then close the input and loop it with
     // feedback 1. One envelope (0 = dry, 1 = repeat) drives both paths via depth-scaled gains.
+    // Beat repeat without a feedback loop: Web Audio delays inside a cycle add one render
+    // quantum (128 frames) per pass, so the repeats would drift. Instead seven taps read the
+    // captured slice at k·slice (k = 1…7, 1/32 needs seven), each gated on only in its window.
     this.stIn = c.createGain();
-    this.stDelay = c.createDelay(1);
-    this.stDelay.delayTime.value = STEP_SECONDS;
-    this.stFb = c.createGain();
-    this.stFb.gain.value = 0;
+    this.stIn.gain.value = 0;
+    this.stTaps = Array.from({ length: 7 }, () => {
+      const delay = c.createDelay(1),
+        gain = c.createGain();
+      gain.gain.value = 0;
+      this.stIn.connect(delay);
+      delay.connect(gain);
+      return { delay, gain };
+    });
     this.stWet = c.createGain();
     this.stWet.gain.value = 0;
     this.stDry = c.createGain();
@@ -165,10 +173,7 @@ export class Engine {
     this.stEnv.start();
     this.tapeOut.connect(this.stDry);
     this.tapeOut.connect(this.stIn);
-    this.stIn.connect(this.stDelay);
-    this.stDelay.connect(this.stFb);
-    this.stFb.connect(this.stDelay);
-    this.stDelay.connect(this.stWet);
+    for (const tap of this.stTaps) tap.gain.connect(this.stWet);
     this.stDry.connect(this.limiter);
     this.stWet.connect(this.limiter);
     this.ceiling = c.createWaveShaper();
@@ -394,16 +399,25 @@ export class Engine {
       f = plan.fade;
     env.cancelScheduledValues(start);
     this.stIn.gain.cancelScheduledValues(start);
-    this.stFb.gain.cancelScheduledValues(start);
-    this.stDelay.delayTime.setValueAtTime(plan.slice, start);
+    // capture exactly one slice; the taps replay it, each in its own window
     this.stIn.gain.setValueAtTime(1, start);
-    this.stFb.gain.setValueAtTime(0, start);
-    env.setValueAtTime(0, start);
     this.stIn.gain.setValueAtTime(0, plan.captureEnd);
-    this.stFb.gain.setValueAtTime(1, plan.captureEnd);
+    this.stTaps.forEach((tap, i) => {
+      const k = i + 1,
+        on = start + k * plan.slice,
+        live = on < plan.end - 1e-6;
+      tap.gain.gain.cancelScheduledValues(start);
+      tap.gain.gain.setValueAtTime(0, start);
+      tap.delay.delayTime.setValueAtTime(Math.min(k * plan.slice, 1), start);
+      if (!live) return;
+      // switches happen at the edges, where the envelope dips to zero (click-free)
+      tap.gain.gain.setValueAtTime(1, on);
+      tap.gain.gain.setValueAtTime(0, Math.min(on + plan.slice, plan.end));
+    });
+    env.setValueAtTime(0, start);
     env.setValueAtTime(0, plan.captureEnd);
     env.linearRampToValueAtTime(1, plan.captureEnd + f);
-    for (const edge of plan.edges.slice(1)) {
+    for (const edge of plan.edges.slice(2)) {
       env.setValueAtTime(1, edge - f);
       env.linearRampToValueAtTime(0, edge);
       env.linearRampToValueAtTime(1, edge + f);
@@ -417,9 +431,11 @@ export class Engine {
     env.cancelScheduledValues(now);
     env.setTargetAtTime(0, now, 0.003);
     this.stIn.gain.cancelScheduledValues(now);
-    this.stIn.gain.setValueAtTime(1, now);
-    this.stFb.gain.cancelScheduledValues(now);
-    this.stFb.gain.setTargetAtTime(0, now, 0.003);
+    this.stIn.gain.setValueAtTime(0, now);
+    for (const tap of this.stTaps) {
+      tap.gain.gain.cancelScheduledValues(now);
+      tap.gain.gain.setTargetAtTime(0, now + 0.012, 0.003);
+    }
   }
   // Tape brake starts on the next 16th grid line after Y leaves zero; stays stopped until release.
   engageTape(now) {
