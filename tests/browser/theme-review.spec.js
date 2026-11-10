@@ -2,7 +2,6 @@ import { mkdir } from "node:fs/promises";
 import { test, expect } from "@playwright/test";
 const out = "test-results/review-artifacts";
 test.beforeEach(async () => mkdir(out, { recursive: true }));
-const center = (b) => ({ x: b.x + b.width / 2, y: b.y + b.height / 2 });
 const AMBER = [255, 188, 77];
 // Computed colours of the root variables and of representative surface elements.
 async function surface(page) {

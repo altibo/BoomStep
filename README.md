@@ -2,7 +2,14 @@
 
 **Spielen: https://altibo.github.io/BoomStep/** · Offlinefähige Musik-PWA, keine Anmeldung, kein KI-Backend. Klang aus **CC0-Samples** (≈ 8,2 MB, beim ersten Laden offline gespeichert).
 
-**Zehn eigene dunkle Bouncy-Techno-Songs**, pro Spur frei wählbar per **Wischen**, ein **Pattern-Regler mit vier Rasten** je Spur und eine Oberfläche, die die **Farbe des gewählten Songs** annimmt. Krassheit, sechs Live-Specials, Orbit/XY-Effekte, REC und Offline-PWA bleiben. Kopfhörer empfohlen.
+**Zehn eigene dunkle Bouncy-Techno-Songs**, pro Spur frei wählbar per **Tippen (‹ voriger · nächster ›)**, **Querformat als Hauptlayout** (Spuren links, Effekte rechts, XY unten rechts), ein **Pattern-Regler mit vier Rasten** je Spur und eine Oberfläche, die die **Farbe des gewählten Songs** annimmt. Krassheit, sechs Live-Specials, Orbit/XY-Effekte, REC und Offline-PWA bleiben. Kopfhörer empfohlen.
+
+## Dark Bounce · 4.1 – Querformat + Song-Tippen
+
+- **Songfeld tippen statt wischen:** das Songfeld jeder Spur ist zweigeteilt (gestrichelte Mitte, ‹ › an den Rändern, jede Hälfte ≥ 44×44 px, eigene Buttons). **Rechte Hälfte = nächster Song, linke = voriger** (ringförmig 10 → 1). Der Wechsel wird für den nächsten Takt vorgemerkt (Amber gestrichelt nur am Feld, „→ ab Tn“); das Feld zeigt **sofort Name und Farbe des Ziel-Songs**, die ganze Oberfläche nimmt sofort dessen Farbe an (keine Amber-Zwischenfarbe). Mehrfach tippen zählt vom vorgemerkten Ziel weiter; zurück auf den laufenden Song tippen hebt die Vormerkung auf. Jede Spur unabhängig, Multitouch, Tastatur (Enter/Leertaste auf den Hälften, Pfeile/Home/End im Feld). Die alte Wischgeste samt Vorschau/Abbruchzone ist entfernt; der Pattern-Regler behält seine Zieh-Vorschau und Abbruchzone.
+- **Querformat ist das Hauptlayout** (`@media (orientation: landscape) and (min-width: 560px)`): **linke Hälfte** = vier Spurkarten untereinander (Songfeld | 4-Stufen-Regler | STUMM | SOLO, darunter PEGEL/FILTER/SPUR-ECHO), **rechte Hälfte** = ALLE SPUREN + Krassheit + Licht, Masterzeile (M-FILTER/HALL/DRIVE/PUMP/HITPEGEL), FX-Kacheln, Transport, Specials 3×2, kleiner Orbit-Ring + Status und das **XY-Feld unten rechts** (rechter Daumen). Ränder per `env(safe-area-inset-*)`. Kein Scrollen für Musik bei 844×390, 932×430, 740×360 und 667×375 (gemessen, siehe Tabelle). Dateiaktionen/Hilfe liegen darunter (Scroll).
+- **Hochformat** bleibt voll bedienbar wie in 4.0 (gestapelt, XY im Orbit-Ring) – kein „bitte drehen“-Zwang. Das Manifest erzwingt deshalb **keine** Orientierung (`orientation` bewusst nicht gesetzt), damit auch die installierte PWA im Hochformat nutzbar bleibt.
+- Querformat-Orbit: Ring 44 px ohne Ziffern (Ziffern wären < 11 px); Takt/Akkord stehen als Text daneben. GATE-Kachel zeigt kompakt „1/8 (→1/16)“.
 
 ## Dark Bounce · 4.0
 
@@ -27,22 +34,20 @@
 - Eigene Kompositionen; keine kopierten Songs, Melodien, Vocals oder ANUUK-Motive. Die ANUUK-Recherche (siehe unten) bleibt reine Text-/Stilorientierung.
 - Entfernt: die Pakete Berlin Bounce, Donk District, Steel Warehouse, Hoover Riot und die drei Classic-Pakete samt Oszillator-Synthese (`legacy-music.js`, `bounce-music.js`).
 
-### Song wischen (pro Spur)
+### Song tippen (pro Spur)
 
-- Linkes Feld jeder Spur zeigt Spurname, Status und Songname. **Rechts wischen = nächster, links = vorheriger Song** (ringförmig; ab 28px ein Schritt, je weitere 64px ein Song mehr).
-- **Während des Wischens** zeigen Karte und die ganze Oberfläche Farbe und Namen des Ziel-Songs (weißer Rahmen, Status „→ los ✓“). **Loslassen** merkt ihn für den nächsten Takt vor (Amber gestrichelt, „→ ab Tn“), gemeinsame Loop-Phase bleibt. Beim Stop wird sofort übernommen.
-- Mehr als 24px nach oben/unten = sichtbares **Abbrechen**; dort loslassen, **Escape**, `pointercancel` oder Capture-Verlust verwerfen die Vorschau und stellen die vorige Farbe wieder her. Eine bestehende Vormerkung bleibt dabei erhalten. Zurück ins Feld ziehen erlaubt wieder Vormerken.
-- Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Tastatur: Pfeiltasten im fokussierten Songfeld (role=slider, 1–10), Home/End.
+- Linkes Feld jeder Spur zeigt Spurname, Status und Songname, geteilt in zwei Tipp-Hälften: **rechts = nächster, links = vorheriger Song** (ringförmig). Merkt zum nächsten Takt vor (Amber gestrichelt, „→ ab Tn“, Name in Zielfarbe), gemeinsame Loop-Phase bleibt. Beim Stop wird sofort übernommen.
+- Mehrfach tippen zählt weiter; Tippen zurück zum laufenden Song löscht die Vormerkung. Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Tastatur: Enter/Leertaste auf ‹/›, Pfeiltasten/Home/End im Feld.
 - **ALLE SPUREN…** setzt alle vier Spuren zum nächsten Takt auf einen Song (Mix und Patternstufen bleiben).
 
 ### Pattern-Regler (ersetzt die Tasten 1–4)
 
-Vier Rasten je Spur (role=slider, 1–4). Tippen oder Ziehen wählt; Ziehen zeigt nur eine weiße Vorschau, **Loslassen** merkt zum nächsten Takt vor (Amber), Abbruch wie beim Songfeld, Pfeile/Home/End. Aktive Raste = gefüllter Daumen in der Songfarbe mit dunkler Ziffer (Kontrast ≥ 7:1).
+Vier Rasten je Spur (role=slider, 1–4). Tippen oder Ziehen wählt; Ziehen zeigt nur eine weiße Vorschau, **Loslassen** merkt zum nächsten Takt vor (Amber); mehr als 24px nach oben/unten, Escape, `pointercancel` oder Capture-Verlust verwerfen; Pfeile/Home/End. Aktive Raste = gefüllter Daumen in der Songfarbe mit dunkler Ziffer (Kontrast ≥ 7:1).
 
 ### Songfarbe auf der ganzen Oberfläche
 
-- **Regel:** Die App übernimmt die Farbe des Songs, der **zuletzt per Wischen oder Tastatur** auf einer Spur gewählt wurde (`session.themeTrack`) – schon während er vorgemerkt ist. Beim Start und nach „ALLE SPUREN“ führt die Drums-Spur. Die führende Spur trägt eine helle Kante.
-- Beim Wischen wird die ganze Oberfläche schon in die kommende Songfarbe getönt, auch während der Vormerkung; Loslassen behält, Abbruch stellt zurück. Akzente (`--theme`: Regler, Orbit, Play/Pause, FX-Kacheln, Krassheit) wechseln **sofort** – ein Farbübergang zwischen zwei Songfarben würde Zwischentöne wie Sand/Amber erzeugen, die für „vorgemerkt“ reserviert sind. Nur die dunkle Hintergrundtönung (`--theme-bg`) blendet 0,4 s weich. **Reduced Motion**: auch der Hintergrund sofort. Jede Spurkarte zeigt zusätzlich ihre eigene Songfarbe.
+- **Regel:** Die App übernimmt die Farbe des Songs, der **zuletzt per Tippen oder Tastatur** auf einer Spur gewählt wurde (`session.themeTrack`) – schon während er vorgemerkt ist. Beim Start und nach „ALLE SPUREN“ führt die Drums-Spur. Die führende Spur trägt eine helle Kante.
+- Beim Tippen wird die ganze Oberfläche sofort in die kommende Songfarbe getönt, auch während der Vormerkung. Akzente (`--theme`: Regler, Orbit, Play/Pause, FX-Kacheln, Krassheit) wechseln **sofort** – ein Farbübergang zwischen zwei Songfarben würde Zwischentöne wie Sand/Amber erzeugen, die für „vorgemerkt“ reserviert sind. Nur die dunkle Hintergrundtönung (`--theme-bg`) blendet 0,4 s weich. **Reduced Motion**: auch der Hintergrund sofort. Jede Spurkarte zeigt zusätzlich ihre eigene Songfarbe.
 - Hintergrund bleibt dunkel (Seitenluminanz < 0,02). **Amber bleibt ausschließlich Vormerkung, Rot ausschließlich Aufnahme**; Songfarben halten ≥ 25° Farbtonabstand zu beiden. Gemessene Kontraste (Chromium, alle 10 Themes): Songname auf Songfeld 5,6–10,8:1, Spurtext 11,8–14:1, Ziffer auf aktiver Raste 7,2–16:1, FX-Text 8,7–12,2:1 (Details: [docs/songs-qa.md](docs/songs-qa.md)).
 - Krassheit hellt die Songfarbe bis 22 % Richtung Weiß auf und verstärkt den Glow (statt der früheren Cyan→Pink-Palette); max. 3 Pulse/s wie bisher.
 
@@ -88,7 +93,7 @@ Auch bei gestopptem oder pausiertem Jam spielbar: der Pad-Tap entsperrt Audio, s
 
 ## Eine Oberfläche, keine musikalischen Untermenüs
 
-**Pro Spur:** Songfeld (wischen), Pattern-Regler mit vier Rasten, **STUMM**, **SOLO**, direkt darunter **PEGEL / FILTER / SPUR-ECHO**. Songfarbe spielt, Amber/gestrichelt ist für den nächsten noch planbaren Takt vorgemerkt. Erneute Wahl des aktiven Songs/Patterns löscht die Vormerkung. Die globale Akkordphase bleibt erhalten. Der 100-ms-Lookahead kann sehr späte Taps erst zum folgenden Takt übernehmen.
+**Pro Spur:** Songfeld (‹ › tippen), Pattern-Regler mit vier Rasten, **STUMM**, **SOLO**, direkt darunter **PEGEL / FILTER / SPUR-ECHO**. Songfarbe spielt, Amber/gestrichelt ist für den nächsten noch planbaren Takt vorgemerkt. Erneute Wahl des aktiven Songs/Patterns löscht die Vormerkung. Die globale Akkordphase bleibt erhalten. Der 100-ms-Lookahead kann sehr späte Taps erst zum folgenden Takt übernehmen.
 
 **Master:** M-FILTER, HALL, DRIVE und PUMP sind immer sichtbar; HITPEGEL liegt als fünfter Fader in derselben Zeile.
 
@@ -112,9 +117,12 @@ Automatisierte Chromium-Prüfung in CSS-Pixeln:
 | 390 × 844      |                      unten bei 822 px | alle musikalischen Controls sichtbar; kein Musik-Scroll nötig           |
 | 390 × 700      |                      unten bei 822 px | 122px Musik-Scroll                                                      |
 | 320 × 568      |                      unten bei 872 px | 304px Musik-Scroll; Spurkürzel DR/BA/ST/RI, zweireihiger Transport |
-| 844 × 390 quer |                      unten bei 638 px | 248px Musik-Scroll                                                      |
+| 844 × 390 quer |                      unten bei 386 px | Querformat-Layout, kein Musik-Scroll; XY 160×154 unten rechts            |
+| 932 × 430 quer |                      unten bei 426 px | kein Musik-Scroll; XY 177×194                                           |
+| 740 × 360 quer |                      unten bei 359 px | kein Musik-Scroll (Rand 1 px, Spurkarten 88 px); XY 150×136             |
+| 667 × 375 quer |                      unten bei 371 px | kein Musik-Scroll; XY 150×139                                           |
 
-Nichtmusikalische Dateiaktionen/Hilfe liegen dahinter und dürfen unter dem Fold stehen. Die 53 direkten musikalischen Trefferflächen (4 Songfelder + 4 Pattern-Regler statt 16 Pattern-Tasten) sind per echten DOM-Bounds geprüft; zusätzlich prüft die Suite Fontgrößen, sichtbare Labels, Clipping und Achsenabstände. Orbit-Ziffern: 14 SVG-Einheiten bei 144/160-Darstellung = effektiv 12,6 CSS-Pixel, ebenfalls gegen den tatsächlich gerenderten Maßstab geprüft. Songnamen passen ungekürzt ins Songfeld (geprüft); unter 360px Breite stehen Spurkürzel, der volle Spurname bleibt in ARIA. Pending steht am Band und als verständlicher Text in der zentralen Meldung, Details zusätzlich für Screenreader.
+Nichtmusikalische Dateiaktionen/Hilfe liegen dahinter und dürfen unter dem Fold stehen. Die 57 direkten musikalischen Trefferflächen (8 Songfeld-Hälften + 4 Pattern-Regler) sind per echten DOM-Bounds geprüft; zusätzlich prüft die Suite Fontgrößen, sichtbare Labels, Clipping und Achsenabstände. Orbit-Ziffern: 14 SVG-Einheiten bei 144/160-Darstellung = effektiv 12,6 CSS-Pixel, ebenfalls gegen den tatsächlich gerenderten Maßstab geprüft. Songnamen passen ungekürzt ins Songfeld (geprüft); unter 360px Breite stehen Spurkürzel, der volle Spurname bleibt in ARIA. Pending steht am Band und als verständlicher Text in der zentralen Meldung, Details zusätzlich für Screenreader.
 
 Alle direkten musikalischen Eingabeflächen — Songfelder, Pattern-Regler, STUMM/SOLO, FX, Specials, Transport, ALLE-SPUREN-Auswahl, XY und alle 18 Fader (17 bisherige plus Krassheit) — haben **mindestens 44×44 CSS-Pixel**. Fader sind echte 44px hohe Felder, keine überlappenden vergrößerten Trefferzonen. Kein horizontaler Scroll. Betriebssystem-Schriftvergrößerung, Safari-Browserleisten oder andere Geräte können zusätzliche Höhe brauchen. Lieber dann scrollen statt Bedienfelder abschneiden.
 
@@ -146,7 +154,7 @@ npm run lint
 npm run build                 # statische PWA in dist/ (inkl. samples/)
 npm run preview               # Produktionsvorschau, Port 4173
 npx playwright install chromium
-npm run test:browser           # 56 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
+npm run test:browser           # 66 Chromium-Tests, inkl. echter PCM-Aufnahme und Offline-Rendering
 npm audit --omit=dev
 ```
 
@@ -154,4 +162,4 @@ Samples neu erzeugen (Rohdateien aus den in CREDITS.md genannten Repositories, f
 
 `src/songs.js`: zehn Songs, Patterns, Harmonie (Skalenstufen relativ zum Bass-Song). `src/music.js`: Session v4 + Migration, PatternClock (Song/Pattern je Spur zum nächsten Takt). `src/samples.js` / `src/sample-bank.json`: Sample-Liste, Laden/Decodieren, Zonen und Hüllkurven. `src/synth.js`: Sample-Stimmen, Drums und Rauschriser. `src/theme.js`: Farbmischung/Kontrast wie im CSS. `src/intensity.js`: additives Makro und Licht. `src/specials.js`: finite Special-Pläne. `src/fx.js`, `src/engine.js`, `src/main.js`, `src/style.css`, `public/recorder.js`, `src/wav.js`, `public/sw.js` / `vite.config.js` (Precache inkl. Samples) wie bisher.
 
-Neue Browser-Specs: `swipe-theme.spec.js` (Vorschau/Commit/Cancel/Escape/pointercancel/lost capture, CSS-Variable vor/nach Loslassen/Abbruch, Multitouch, Slider-ARIA/Tastatur, Kontrast je Song, weicher/sofortiger Farbwechsel, Layout), `songs.spec.js` (Layouts, Migration, 160 Pattern-Renders, FX, Demos), `mixes.spec.js` (Mix-WAVs mit 2/4 Songs, Wechseln, Specials, max. Krassheit; Live-REC mit gewischtem Songwechsel). Artefakte unter `test-results/song-artifacts/`. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
+Browser-Specs: `song-tap.spec.js` (Tippen rechts/links, mehrfach, Wrap, Vormerkung/Rücknahme, Trefferflächen ≥ 44 px, Rollen/ARIA/Tastatur, Multitouch, Slider, Kontrast je Song, Layout), `landscape.spec.js` (Bounds 844×390/932×430/740×360/667×375: Spuren links, Rest rechts, XY im rechten unteren Quadranten, keine Überlappung/Clipping, Font/Touch-Minima, spielbar; 1280×720 + Hochformat-Regression), `theme-review.spec.js` (Oberflächenfarbe beim Tippen hoch/quer, Reduced Motion), `songs.spec.js` (Layouts, Migration, 160 Pattern-Renders, FX, Demos), `mixes.spec.js` (Mix-WAVs mit 2/4 Songs, Wechseln, Specials, max. Krassheit; Live-REC im Querformat mit getippten Songwechseln). Artefakte unter `test-results/song-artifacts/`. Statische HTTPS-Bereitstellung siehe [deployment/README.md](deployment/README.md).
