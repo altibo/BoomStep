@@ -1,16 +1,5 @@
 import { driveCurve } from "./fx.js";
 import { INSTRUMENTS, nearestZone } from "./samples.js";
-// Deterministic noise only for the UP SWEEP riser; every tonal/drum voice plays a CC0 sample.
-export function noiseBuffer(c) {
-  const b = c.createBuffer(1, c.sampleRate, c.sampleRate),
-    data = b.getChannelData(0);
-  let seed = 27;
-  for (let i = 0; i < data.length; i++) {
-    seed = (seed * 16807) % 2147483647;
-    data[i] = seed / 1073741824 - 1;
-  }
-  return b;
-}
 const DRUM_GAIN = {
   kick: 1.05,
   kickround: 1.05,
@@ -34,7 +23,6 @@ export function createVoice(
   dt,
   destination,
   library,
-  noise,
   register = () => {},
 ) {
   const e = event,
@@ -49,23 +37,7 @@ export function createVoice(
   };
   const amp = node(c.createGain());
   amp.connect(destination);
-  if (e.kind === "rise") {
-    const d = e.seconds;
-    amp.gain.setValueAtTime(0.0001, time);
-    amp.gain.linearRampToValueAtTime(e.velocity, time + d * 0.8);
-    amp.gain.linearRampToValueAtTime(0, time + d);
-    const f = node(c.createBiquadFilter());
-    f.type = "bandpass";
-    f.Q.value = 1.1;
-    f.frequency.setValueAtTime(220, time);
-    f.frequency.exponentialRampToValueAtTime(9000, time + d);
-    f.connect(amp);
-    const n = node(c.createBufferSource());
-    n.buffer = noise;
-    n.loop = true;
-    n.connect(f);
-    start(n, time, 0, time + d + 0.02);
-  } else if (e.kind === "tone") {
+  if (e.kind === "tone") {
     const inst = INSTRUMENTS[e.inst],
       zone = nearestZone(library.instruments[e.inst], e.note),
       duration = e.seconds ?? (e.length || 1) * dt,
@@ -74,11 +46,6 @@ export function createVoice(
       rate = 2 ** ((e.note - zone.root) / 12);
     src.buffer = zone.buffer;
     src.playbackRate.setValueAtTime(rate, time);
-    if (e.glide)
-      src.playbackRate.exponentialRampToValueAtTime(
-        rate * 2 ** (e.glide / 12),
-        end,
-      );
     const f = node(c.createBiquadFilter());
     f.type = "lowpass";
     f.Q.value = inst.q;

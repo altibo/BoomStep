@@ -22,9 +22,6 @@ export function orbitPoint(progress, radius = 69) {
   const a = progress * Math.PI * 2 - Math.PI / 2;
   return { x: 80 + Math.cos(a) * radius, y: 80 + Math.sin(a) * radius };
 }
-export function glideEntry(previous, current) {
-  return { current, trigger: current !== null && previous !== current };
-}
 // Deliberate escape corridor; horizontal drags still clamp to first/last choice.
 export function ribbonCancelled(y, rect, margin = 24) {
   return y < rect.top - margin || y > rect.bottom + margin;

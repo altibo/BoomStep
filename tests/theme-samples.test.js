@@ -3,7 +3,6 @@ import assert from "node:assert/strict";
 import { readFileSync, statSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { SONGS, TRACKS, eventsAt } from "../src/music.js";
-import { specialPlan, SPECIALS } from "../src/specials.js";
 import {
   bank,
   nearestZone,
@@ -120,10 +119,6 @@ test("pitch shift per played note stays small; drum samples referenced by songs 
               t,
               s,
             ).forEach(check);
-  for (let h = 0; h < 10; h++)
-    for (let s = 0; s < 64; s += 16)
-      for (const sp of SPECIALS)
-        specialPlan(sp.id, h, s).forEach((p) => check(p.event));
   console.log("max semitone shift per instrument", JSON.stringify(maxShift));
   for (const [inst, d] of Object.entries(maxShift))
     assert.ok(d <= 3, `${inst} ${d}`);

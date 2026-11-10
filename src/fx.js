@@ -10,14 +10,21 @@ export function xyPoint(x, y, rect) {
 export function releaseFX(fx) {
   return fx.hold ? { ...fx } : { ...fx, x: 0.5, depth: 0 };
 }
+// X is the shared colour filter for ECHO/FLANGER/GATE/DRIVE; STUTTER, TAPE-STOP and CRUSH
+// use X for their own parameter (slice length, brake length, bit depth), filter stays open.
+export const COLOUR_MODES = ["echo", "flanger", "gate", "drive"];
 export function fxTargets(session) {
-  const f = session.fx;
+  const f = session.fx,
+    colour = COLOUR_MODES.includes(f.mode);
   return {
     low: Math.min(
       cutoff(session.master),
-      f.x < 0.5 ? 180 * (18000 / 180) ** (f.x * 2) : 18000,
+      colour && f.x < 0.5 ? 180 * (18000 / 180) ** (f.x * 2) : 18000,
     ),
-    high: f.x > 0.5 ? 25 * (3500 / 25) ** ((f.x - 0.5) * 2) : 25,
+    high: colour && f.x > 0.5 ? 25 * (3500 / 25) ** ((f.x - 0.5) * 2) : 25,
+    stutter: f.mode === "stutter" ? f.depth : 0,
+    tape: f.mode === "tape" ? f.depth : 0,
+    crush: f.mode === "crush" ? f.depth : 0,
     echo: f.mode === "echo" ? f.depth * 0.62 : 0,
     flanger: f.mode === "flanger" ? f.depth * 0.78 : 0,
     drive: clamp(
@@ -61,4 +68,41 @@ export function panicSession(session) {
     t.delay = 0;
     t.filter = 1;
   }
+}
+// STUTTER: slice length in 16th steps from X (left 1/8, middle 1/16, right 1/32).
+export const stutterSlice = (x) => (x < 1 / 3 ? 2 : x < 2 / 3 ? 1 : 0.5);
+export const sliceName = (steps) =>
+  ({ 2: "1/8", 1: "1/16", 0.5: "1/32" })[steps];
+// Beat repeat plan for one beat (4 steps) starting at `start`: capture the first slice, then
+// loop it; the wet envelope opens after the capture and dips 2ms around every repeat edge so
+// loop joins never click. Times are absolute audio-clock seconds.
+export function stutterPlan(start, sliceSteps, dt, fade = 0.002) {
+  const slice = sliceSteps * dt,
+    end = start + 4 * dt,
+    edges = [];
+  for (let t = start + slice; t < end - 1e-9; t += slice) edges.push(t);
+  return { slice, captureEnd: start + slice, end, edges, fade };
+}
+// TAPE-STOP: brake length from X (half a beat … two bars of beats), Y is the wet amount.
+export const tapeSeconds = (x, beat) => beat * (0.5 + x * 3.5);
+// Delay-time curve for a linear speed ramp 1 → 0 over `seconds`. A delay line plays at
+// speed 1 − d'(t), so d'(t) = t/T and d(t) = t²/(2T) (reaches T/2 at the stop).
+export function brakeCurve(seconds, points = 96) {
+  const c = new Float32Array(points);
+  for (let i = 0; i < points; i++) {
+    const t = (i / (points - 1)) * seconds;
+    c[i] = (t * t) / (2 * seconds);
+  }
+  return c;
+}
+// CRUSH: bit depth from X (left 8 bit … right 2 bit) and a staircase quantiser curve.
+export const crushBits = (x) => Math.round(8 - x * 6);
+export function crushCurve(bits, size = 8193) {
+  const c = new Float32Array(size),
+    levels = 2 ** (bits - 1);
+  for (let i = 0; i < size; i++) {
+    const x = (i / (size - 1)) * 2 - 1;
+    c[i] = Math.round(x * levels) / levels;
+  }
+  return c;
 }

@@ -4,7 +4,6 @@ import {
   ribbonVariant,
   orbitPosition,
   orbitPoint,
-  glideEntry,
 } from "../src/instrument-ui.js";
 test("pattern ribbon snaps to four discrete variants including captured out-of-bounds drags", () => {
   const r = { left: 10, width: 200 };
@@ -36,16 +35,6 @@ test("orbit is read from shared audio time, wraps eight bars and never invents a
   );
   assert.deepEqual(orbitPoint(0), { x: 80, y: 11 });
   assert.ok(Math.abs(orbitPoint(0.25).x - 149) < 1e-9);
-});
-test("strum fires only on field entry, not hold, and re-entry deliberately retriggers", () => {
-  let previous = null,
-    count = 0;
-  for (const id of ["bark", "bark", "bass", "bass", null, "bass", "bark"]) {
-    const n = glideEntry(previous, id);
-    previous = n.current;
-    count += Number(n.trigger);
-  }
-  assert.equal(count, 4);
 });
 test("intentional vertical cancel has a 24px safety corridor and re-entry re-arms selection", async () => {
   const { ribbonCancelled } = await import("../src/instrument-ui.js");

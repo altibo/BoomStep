@@ -159,7 +159,7 @@ test("mute wins over solo and multiple solos work", () => {
   t[1].mute = true;
   assert.equal(audible(t, 1), false);
 });
-test("V4 session JSON roundtrip and strict invalid-data rejection", () => {
+test("V5 session JSON roundtrip and strict invalid-data rejection", () => {
   const s = initialSession(3);
   s.tracks[2].delay = 0.8;
   s.tracks[1].song = 9;
@@ -168,7 +168,7 @@ test("V4 session JSON roundtrip and strict invalid-data rejection", () => {
   for (const bad of [
     null,
     {},
-    { ...s, version: 5 },
+    { ...s, version: 6 },
     { ...s, pack: 2 },
     { ...s, themeTrack: 4 },
     { ...s, master: NaN },

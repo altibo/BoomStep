@@ -1,14 +1,21 @@
 import { SONGS, TRACKS, PATTERN_NAMES, BPM, KEY, songEvents } from "./songs.js";
 export { SONGS, TRACKS, PATTERN_NAMES, BPM, KEY };
-export const FX_MODES = ["echo", "flanger", "gate", "drive"];
-export const SESSION_VERSION = 4;
+export const FX_MODES = [
+  "stutter",
+  "echo",
+  "flanger",
+  "gate",
+  "drive",
+  "tape",
+  "crush",
+];
+export const SESSION_VERSION = 5;
 // Old V1–3 sessions referenced removed packages. They keep their mix/patterns/FX and get one
 // deterministic new song per old package index (documented fallback, not a sound match).
 export const LEGACY_PACK_SONG = [3, 6, 9, 1, 4, 7, 0];
 export function initialSession(song = 0) {
   return {
     version: SESSION_VERSION,
-    specialLevel: 0.7,
     intensity: 0,
     beatLights: true,
     themeTrack: 0,
@@ -32,7 +39,7 @@ const unit = (n) =>
   typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1;
 const index = (n, max) => Number.isInteger(n) && n >= 0 && n < max;
 export function validateSession(value) {
-  if (!value || ![1, 2, 3, 4].includes(value.version))
+  if (!value || ![1, 2, 3, 4, 5].includes(value.version))
     throw new Error("Ungültige Session");
   let s = structuredClone(value);
   if (s.version === 1) {
@@ -48,7 +55,7 @@ export function validateSession(value) {
   }
   if (s.version === 2) {
     if (!index(s.pack, 6)) throw new Error("Ungültiges V2-Paket");
-    s = { ...s, version: 3, specialLevel: 0.7 };
+    s = { ...s, version: 3 };
   }
   if (s.version === 3) {
     if (!index(s.pack, 7) || !Array.isArray(s.tracks))
@@ -65,7 +72,15 @@ export function validateSession(value) {
     if (!Object.hasOwn(s, "intensity")) s.intensity = 0;
     if (!Object.hasOwn(s, "beatLights")) s.beatLights = true;
   }
-  if (Object.hasOwn(s, "pack")) throw new Error("Ungültige Session");
+  // v4 → v5: the one-shot SPECIALS pads (and their HITPEGEL level) were removed.
+  if (s.version === 4) {
+    if (Object.hasOwn(s, "specialLevel") && !unit(s.specialLevel))
+      throw new Error("Ungültiger Mix");
+    s = { ...s, version: 5 };
+    delete s.specialLevel;
+  }
+  if (Object.hasOwn(s, "pack") || Object.hasOwn(s, "specialLevel"))
+    throw new Error("Ungültige Session");
   if (!unit(s.intensity) || typeof s.beatLights !== "boolean")
     throw new Error("Ungültige Krassheit/Lichtwahl");
   if (
@@ -74,11 +89,7 @@ export function validateSession(value) {
     s.tracks.length !== 4
   )
     throw new Error("Ungültige Session");
-  if (
-    !["master", "reverb", "drive", "pump", "specialLevel"].every((k) =>
-      unit(s[k]),
-    )
-  )
+  if (!["master", "reverb", "drive", "pump"].every((k) => unit(s[k])))
     throw new Error("Ungültiger Mix");
   if (
     !s.fx ||
