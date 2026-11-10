@@ -290,7 +290,7 @@ test("readable specials and controls fit 390x844; smaller viewports scroll hones
     for (const selector of [
       ".special-pad",
       ".variant-slider",
-      ".song-swipe",
+      ".song-step",
       ".mute",
       ".solo",
       ".transport button",

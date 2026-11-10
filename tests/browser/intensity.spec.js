@@ -29,7 +29,7 @@ test("large macro stays direct and readable at 0/50/100 without adding viewport 
         ),
         targets: [
           ...document.querySelectorAll(
-            ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs,#intensity,#light-mode",
+            ".variant-slider,.song-step,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs,#intensity,#light-mode",
           ),
         ].map((e) => {
           const b = e.getBoundingClientRect();
@@ -45,7 +45,7 @@ test("large macro stays direct and readable at 0/50/100 without adding viewport 
       }));
       expect(m.overflow).toBe(false);
       expect(m.clipped).toBe(false);
-      expect(m.targets).toHaveLength(53);
+      expect(m.targets).toHaveLength(57);
       expect(m.bottom).toBe(width === 390 ? 822 : 872);
       for (const b of m.targets) {
         expect(b.w).toBeGreaterThanOrEqual(44);

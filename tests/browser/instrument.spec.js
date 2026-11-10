@@ -263,7 +263,7 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
     else expect(box.y + box.height).toBeGreaterThan(height);
     const bad = await page
       .locator(
-        ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",
+        ".variant-slider,.song-step,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",
       )
       .evaluateAll((es) =>
         es

@@ -252,7 +252,7 @@ test("R3 all musical targets have real 44px bounds and fit above 840px on 390x84
   await page.goto("/");
   const geometry = await page
     .locator(
-      ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs",
+      ".variant-slider,.song-step,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs",
     )
     .evaluateAll((es) =>
       es.map((e) => {

@@ -13,22 +13,31 @@ const theme = (page) =>
       .trim(),
     song: document.documentElement.dataset.themeSong,
     track: document.documentElement.dataset.themeTrack,
-    preview: document.documentElement.dataset.themePreview,
   }));
-async function grab(page, track) {
-  const cell = page.locator(`[data-swipe="${track}"]`);
+// Point inside the left (-1) or right (+1) half of a track's song cell.
+async function half(page, track, side) {
+  const cell = page.locator(`[data-songcell="${track}"]`);
   await cell.scrollIntoViewIfNeeded();
-  const p = center(await cell.boundingBox());
-  await page.mouse.move(p.x, p.y);
-  await page.mouse.down();
+  const b = await cell.boundingBox();
+  return { x: b.x + b.width * (side > 0 ? 0.8 : 0.2), y: b.y + b.height / 2 };
+}
+async function tap(page, track, side) {
+  const p = await half(page, track, side);
+  await page.mouse.click(p.x, p.y);
   return p;
 }
+const pendingSongs = (page) =>
+  page.evaluate(() =>
+    [0, 1, 2, 3].map(
+      (i) => window.boomstep.engine.clock.pending.get(i)?.song ?? null,
+    ),
+  );
 const rgbOf = (s) =>
   s
     .match(/[\d.]+/g)
     .slice(0, 3)
     .map(Number);
-test("swipe right previews song colour + name on the card AND the whole surface; release commits at the next bar", async ({
+test("tap right half = next song: queued for the next bar, field shows target name+colour, surface follows at once", async ({
   page,
 }) => {
   await page.goto("/");
@@ -36,157 +45,169 @@ test("swipe right previews song colour + name on the card AND the whole surface;
   expect(list).toHaveLength(10);
   await page.locator("#play").click();
   await page.waitForFunction(() => window.boomstep.engine.clock.step > 2);
-  const before = await theme(page);
-  expect(before.inline).toBe(list[0][1]);
-  const p = await grab(page, 2);
-  await page.mouse.move(p.x + 40, p.y, { steps: 3 });
-  // live preview, nothing committed yet
-  await expect(page.locator("#name-2")).toHaveText(`${list[1][0]}`);
-  await expect(page.locator('[data-swipe="2"]')).toHaveClass(/previewing/);
-  let t = await theme(page);
-  expect(t).toMatchObject({
-    inline: list[1][1],
-    song: "1",
-    track: "2",
-    preview: "true",
-  });
-  expect(
-    await page.evaluate(() => window.boomstep.engine.clock.pending.size),
-  ).toBe(0);
-  expect(
-    await page
-      .locator("#track-2")
-      .evaluate((e) => e.style.getPropertyValue("--song")),
-  ).toBe(list[1][1]);
-  await page.mouse.move(p.x + 40 + 64, p.y, { steps: 3 });
-  await expect(page.locator("#name-2")).toHaveText(`${list[2][0]}`);
-  expect((await theme(page)).inline).toBe(list[2][1]);
-  await page.screenshot({ path: `${out}/swipe-preview-390x844.png` });
-  await page.mouse.up();
-  // committed: pending amber until bar, surface keeps the new colour
+  expect((await theme(page)).inline).toBe(list[0][1]);
+  await tap(page, 2, 1);
   const pending = await page.evaluate(() =>
     window.boomstep.engine.clock.pending.get(2),
   );
-  expect(pending.song).toBe(2);
+  expect(pending.song).toBe(1);
   expect(pending.at % 16).toBe(0);
-  await expect(page.locator('[data-swipe="2"]')).toHaveClass(/queued/);
+  const cell = page.locator('[data-songcell="2"]');
+  await expect(cell).toHaveClass(/queued/);
+  await expect(page.locator("#name-2")).toHaveText(list[1][0]);
   await expect(page.locator("#song-cue-2")).toContainText("ab T");
-  t = await theme(page);
-  expect(t).toMatchObject({ inline: list[2][1], track: "2", preview: "false" });
-  await page.screenshot({ path: `${out}/swipe-pending-390x844.png` });
+  // target colour immediately: surface accent, theme track, pending name colour
+  expect(await theme(page)).toMatchObject({
+    inline: list[1][1],
+    song: "1",
+    track: "2",
+  });
+  const look = await page.evaluate(() => {
+    const cs = (s) => getComputedStyle(document.querySelector(s));
+    return {
+      name: cs("#name-2").color,
+      border: cs('[data-songcell="2"]').borderTopColor,
+      cue: cs("#song-cue-2").color,
+      card: document.querySelector("#track-2").style.getPropertyValue("--song"),
+    };
+  });
+  const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  expect(rgbOf(look.name)).toEqual(hex(list[1][1]));
+  expect(rgbOf(look.border)).toEqual([255, 188, 77]); // amber only on the pending field
+  expect(look.card).toBe(list[0][1]); // still playing song 1 until the bar line
+  await page.screenshot({ path: `${out}/tap-pending-390x844.png` });
+  // a second tap counts on from the pending target
+  await tap(page, 2, 1);
+  expect((await pendingSongs(page))[2]).toBe(2);
+  await expect(page.locator("#name-2")).toHaveText(list[2][0]);
+  expect((await theme(page)).inline).toBe(list[2][1]);
+  // a press that drifts off the field is still exactly one tap (no swipe/cancel gesture)
+  const p = await half(page, 2, 1);
+  await page.mouse.move(p.x, p.y);
+  await page.mouse.down();
+  await page.mouse.move(p.x - 90, p.y + 60, { steps: 4 });
+  await page.mouse.up();
+  expect((await pendingSongs(page))[2]).toBe(3);
+  await expect(cell).not.toHaveClass(/canceling|previewing/);
+  const at = (
+    await page.evaluate(() => window.boomstep.engine.clock.pending.get(2))
+  ).at;
   await page.waitForFunction(
     (at) => window.boomstep.engine.clock.step > at + 1,
-    pending.at,
+    at,
   );
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[2].song),
-  ).toBe(2);
   expect(
     await page.evaluate(() =>
       window.boomstep.session.tracks.map((x) => x.song),
     ),
-  ).toEqual([0, 0, 2, 0]);
-  await expect(page.locator("#name-2")).toHaveText(list[2][0]);
-  expect((await theme(page)).inline).toBe(list[2][1]);
-  // phase was shared: the switch landed exactly on a bar line
-  expect(pending.at % 16).toBe(0);
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: `${out}/theme-lindenfrost-390x844.png` });
+  ).toEqual([0, 0, 3, 0]);
+  await expect(cell).not.toHaveClass(/queued/);
+  await expect(page.locator("#name-2")).toHaveText(list[3][0]);
+  expect((await theme(page)).inline).toBe(list[3][1]);
 });
-test("swipe left goes to the previous song (circular); vertical cancel, Escape, pointercancel and lost capture restore the colour", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const list = await songs(page);
-  let p = await grab(page, 1);
-  await page.mouse.move(p.x - 40, p.y, { steps: 3 });
-  await expect(page.locator("#name-1")).toHaveText(`${list[9][0]}`);
-  expect((await theme(page)).inline).toBe(list[9][1]);
-  // vertical cancel zone
-  await page.mouse.move(p.x - 40, p.y - 60, { steps: 3 });
-  await expect(page.locator('[data-swipe="1"]')).toHaveClass(/canceling/);
-  await expect(page.locator("#name-1")).toHaveText("Abbrechen");
-  expect((await theme(page)).inline).toBe(list[0][1]);
-  await page.mouse.up();
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[1].song),
-  ).toBe(0);
-  expect((await theme(page)).inline).toBe(list[0][1]);
-  // Escape
-  p = await grab(page, 3);
-  await page.mouse.move(p.x + 120, p.y, { steps: 3 });
-  expect((await theme(page)).inline).not.toBe(list[0][1]);
-  await page.keyboard.press("Escape");
-  expect((await theme(page)).inline).toBe(list[0][1]);
-  await page.mouse.up();
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[3].song),
-  ).toBe(0);
-  // pointercancel
-  p = await grab(page, 0);
-  await page.mouse.move(p.x + 50, p.y, { steps: 3 });
-  await page
-    .locator('[data-swipe="0"]')
-    .dispatchEvent("pointercancel", { pointerId: 1 });
-  expect((await theme(page)).inline).toBe(list[0][1]);
-  await page.mouse.up();
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[0].song),
-  ).toBe(0);
-  // lost capture
-  p = await grab(page, 2);
-  await page.mouse.move(p.x + 50, p.y, { steps: 3 });
-  await page
-    .locator('[data-swipe="2"]')
-    .evaluate((el) => el.releasePointerCapture(1));
-  await expect.poll(async () => (await theme(page)).inline).toBe(list[0][1]);
-  await page.mouse.up();
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[2].song),
-  ).toBe(0);
-  // re-entry after cancel still commits
-  p = await grab(page, 1);
-  await page.mouse.move(p.x - 40, p.y - 60, { steps: 2 });
-  await page.mouse.move(p.x - 40, p.y, { steps: 2 });
-  await page.mouse.up();
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[1].song),
-  ).toBe(9);
-  expect((await theme(page)).inline).toBe(list[9][1]);
-});
-test("cancel while a song switch is pending keeps that pending switch and its amber state", async ({
+test("tap left half = previous song and wraps 1 → 10; tapping back to the playing song clears the pending switch", async ({
   page,
 }) => {
   await page.goto("/");
   const list = await songs(page);
   await page.locator("#play").click();
-  await page.waitForFunction(
-    () =>
-      window.boomstep.engine.clock.step % 16 > 1 &&
-      window.boomstep.engine.clock.step % 16 < 8,
-  );
-  let p = await grab(page, 1);
-  await page.mouse.move(p.x + 40, p.y, { steps: 2 });
-  await page.mouse.up();
-  const pending = await page.evaluate(() =>
-    JSON.stringify(window.boomstep.engine.clock.pending.get(1)),
-  );
-  expect(JSON.parse(pending).song).toBe(1);
-  // a new preview starts from the pending choice
-  p = await grab(page, 1);
-  await page.mouse.move(p.x + 40, p.y, { steps: 2 });
-  await expect(page.locator("#name-1")).toHaveText(`${list[2][0]}`);
-  await page.keyboard.press("Escape");
-  await page.mouse.up();
+  await page.waitForFunction(() => window.boomstep.engine.clock.step > 2);
+  await tap(page, 0, -1);
+  expect((await pendingSongs(page))[0]).toBe(9);
+  await expect(page.locator("#name-0")).toHaveText(list[9][0]);
+  expect((await theme(page)).inline).toBe(list[9][1]);
+  await tap(page, 0, -1);
+  expect((await pendingSongs(page))[0]).toBe(8);
+  await tap(page, 0, 1);
+  await tap(page, 0, 1);
+  // back on the playing song: nothing pending, no amber
+  expect((await pendingSongs(page))[0]).toBe(null);
+  await expect(page.locator('[data-songcell="0"]')).not.toHaveClass(/queued/);
+  await expect(page.locator("#name-0")).toHaveText(list[0][0]);
+  expect((await theme(page)).inline).toBe(list[0][1]);
+  // stopped transport applies at once and wraps 10 → 1 as well
+  await page.locator("#stop").click();
+  for (let i = 0; i < 9; i++) await tap(page, 1, -1);
   expect(
-    await page.evaluate(() =>
-      JSON.stringify(window.boomstep.engine.clock.pending.get(1)),
-    ),
-  ).toBe(pending);
-  await expect(page.locator('[data-swipe="1"]')).toHaveClass(/queued/);
-  expect((await theme(page)).inline).toBe(list[1][1]);
+    await page.evaluate(() => window.boomstep.session.tracks[1].song),
+  ).toBe(1);
+  await tap(page, 1, 1);
+  await tap(page, 1, 1);
+  expect(
+    await page.evaluate(() => window.boomstep.session.tracks[1].song),
+  ).toBe(3);
 });
-test("two touch fingers swipe different tracks independently; each card previews its own song", async ({
+test("song field: two ≥44px halves with visible ‹ › hints, button roles, keyboard Enter/arrows, ARIA labels name the neighbour", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const list = await songs(page);
+  for (const track of [0, 1, 2, 3]) {
+    const m = await page.evaluate((t) => {
+      const box = (e) => e.getBoundingClientRect().toJSON();
+      const cell = document.querySelector(`[data-songcell="${t}"]`);
+      const [prev, next] = [".song-prev", ".song-next"].map((s) =>
+        cell.querySelector(s),
+      );
+      return {
+        cell: box(cell),
+        prev: box(prev),
+        next: box(next),
+        chev: [prev, next].map((b) => {
+          const i = b.querySelector("i");
+          return [
+            i.textContent,
+            parseFloat(getComputedStyle(i).fontSize),
+            box(i).width,
+          ];
+        }),
+        roles: [cell.getAttribute("role"), prev.tagName, next.tagName],
+      };
+    }, track);
+    expect(m.roles).toEqual(["group", "BUTTON", "BUTTON"]);
+    for (const h of [m.prev, m.next]) {
+      expect(h.width).toBeGreaterThanOrEqual(44);
+      expect(h.height).toBeGreaterThanOrEqual(44);
+    }
+    expect(m.prev.right).toBeLessThanOrEqual(m.next.left + 0.5); // no overlap
+    expect(
+      Math.abs(m.prev.right - (m.cell.left + m.cell.width / 2)),
+    ).toBeLessThan(2);
+    expect(m.chev.map((c) => c[0])).toEqual(["‹", "›"]);
+    for (const c of m.chev) expect(c[1]).toBeGreaterThanOrEqual(11);
+  }
+  await expect(page.locator('[data-songcell="0"] .song-next')).toHaveAttribute(
+    "aria-label",
+    new RegExp(`nächster Song ${list[1][0]}`),
+  );
+  await expect(page.locator('[data-songcell="0"] .song-prev')).toHaveAttribute(
+    "aria-label",
+    new RegExp(`voriger Song ${list[9][0]}`),
+  );
+  await page.locator('[data-songcell="1"] .song-next').focus();
+  await page.keyboard.press("Enter");
+  expect(
+    await page.evaluate(() => window.boomstep.session.tracks[1].song),
+  ).toBe(1);
+  await page.keyboard.press("Space");
+  expect(
+    await page.evaluate(() => window.boomstep.session.tracks[1].song),
+  ).toBe(2);
+  await page.keyboard.press("ArrowLeft");
+  expect(
+    await page.evaluate(() => window.boomstep.session.tracks[1].song),
+  ).toBe(1);
+  await page.keyboard.press("End");
+  expect(
+    await page.evaluate(() => window.boomstep.session.tracks[1].song),
+  ).toBe(9);
+  await expect(page.locator('[data-songcell="1"]')).toHaveAttribute(
+    "aria-description",
+    new RegExp(list[9][0]),
+  );
+  expect((await theme(page)).track).toBe("1");
+});
+test("two touch fingers tap different tracks at once; each track steps independently", async ({
   page,
   context,
 }) => {
@@ -197,8 +218,8 @@ test("two touch fingers swipe different tracks independently; each card previews
     enabled: true,
     maxTouchPoints: 5,
   });
-  const a = center(await page.locator('[data-swipe="0"]').boundingBox()),
-    b = center(await page.locator('[data-swipe="3"]').boundingBox());
+  const a = await half(page, 0, 1),
+    b = await half(page, 3, -1);
   await cdp.send("Input.dispatchTouchEvent", {
     type: "touchStart",
     touchPoints: [
@@ -207,21 +228,6 @@ test("two touch fingers swipe different tracks independently; each card previews
     ],
   });
   await cdp.send("Input.dispatchTouchEvent", {
-    type: "touchMove",
-    touchPoints: [
-      { id: 1, x: a.x + 40, y: a.y },
-      { id: 2, x: b.x - 110, y: b.y },
-    ],
-  });
-  await expect(page.locator(".song-swipe.previewing")).toHaveCount(2);
-  await expect(page.locator("#name-0")).toHaveText(`${list[1][0]}`);
-  await expect(page.locator("#name-3")).toHaveText(`${list[8][0]}`);
-  expect(
-    await page.evaluate(() =>
-      window.boomstep.session.tracks.map((t) => t.song),
-    ),
-  ).toEqual([0, 0, 0, 0]);
-  await cdp.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
   });
@@ -229,13 +235,13 @@ test("two touch fingers swipe different tracks independently; each card previews
     await page.evaluate(() =>
       window.boomstep.session.tracks.map((t) => t.song),
     ),
-  ).toEqual([1, 0, 0, 8]);
+  ).toEqual([1, 0, 0, 9]);
   const cards = await page.evaluate(() =>
     [0, 1, 2, 3].map((i) =>
       document.querySelector(`#track-${i}`).style.getPropertyValue("--song"),
     ),
   );
-  expect(cards).toEqual([list[1][1], list[0][1], list[0][1], list[8][1]]);
+  expect(cards).toEqual([list[1][1], list[0][1], list[0][1], list[9][1]]);
   expect(await page.evaluate(() => window.boomstep.engine.running)).toBe(false);
 });
 test("pattern slider: 4 steps, ARIA slider semantics, keyboard, tap, drag-preview and next-bar commit", async ({
@@ -284,14 +290,11 @@ test("pattern slider: 4 steps, ARIA slider semantics, keyboard, tap, drag-previe
   );
   await expect(band.locator('[data-variant="3"]')).toHaveClass(/active/);
   await expect(band).toHaveAttribute("aria-valuenow", "4");
-  // song swipe keyboard + ARIA
-  const cell = page.locator('[data-swipe="0"]');
-  await expect(cell).toHaveAttribute("role", "slider");
-  await expect(cell).toHaveAttribute("aria-valuemax", "10");
-  await cell.focus();
+  // song field keyboard: End queues the last song for the next bar
+  const cell = page.locator('[data-songcell="0"]');
+  await cell.locator(".song-next").focus();
   await page.keyboard.press("End");
-  await expect(cell).toHaveAttribute("aria-valuenow", "10");
-  await expect(cell).toHaveAttribute("aria-valuetext", /vorgemerkt/);
+  await expect(cell).toHaveAttribute("aria-description", /vorgemerkt/);
 });
 test("every one of the 10 themes keeps measured text contrast; amber/red stay fixed; background stays dark", async ({
   page,
@@ -328,7 +331,7 @@ test("every one of the 10 themes keeps measured text contrast; amber/red stay fi
       const page = cs("html", "backgroundColor");
       base = page;
       const card = cs("#track-1", "backgroundColor"),
-        cell = cs('[data-swipe="1"]', "backgroundColor"),
+        cell = cs('[data-songcell="1"]', "backgroundColor"),
         name = cs("#name-1", "color"),
         label = cs("#track-1 .track-label", "color"),
         stop = cs('[data-ribbon="1"] .stop.active', "backgroundColor"),
@@ -417,7 +420,7 @@ test("layout: music block ends ≤ y822 at 390×844, targets ≥ 44px, fonts ≥
           .bottom,
         tracksBottom: document.querySelector(".tracks").getBoundingClientRect()
           .bottom,
-        swipe: r(".song-swipe").map((b) => [b.width, b.height]),
+        halves: r(".song-step").map((b) => [b.width, b.height]),
         slider: r(".variant-slider").map((b) => [b.width, b.height]),
         minFont: Math.min(...fonts),
         nameClip: [...document.querySelectorAll(".song-name")].map(
@@ -428,7 +431,7 @@ test("layout: music block ends ≤ y822 at 390×844, targets ≥ 44px, fonts ≥
     console.log("Layout", w, h, JSON.stringify(m));
     expect(m.overflow).toBeLessThanOrEqual(0);
     expect(m.minFont).toBeGreaterThanOrEqual(11);
-    for (const [bw, bh] of [...m.swipe, ...m.slider]) {
+    for (const [bw, bh] of [...m.halves, ...m.slider]) {
       expect(bw).toBeGreaterThanOrEqual(44);
       expect(bh).toBeGreaterThanOrEqual(44);
     }

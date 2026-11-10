@@ -15,7 +15,7 @@ test("mobile jam produces nonzero stereo WAV and preserves phase across pause", 
   ).toBeTruthy();
   for (const locator of [
     ".variant-slider",
-    ".song-swipe",
+    ".song-step",
     ".mute",
     ".solo",
     ".transport button",
@@ -205,7 +205,7 @@ test("narrow phone controls remain touch-safe without horizontal overflow", asyn
   ).toBeTruthy();
   for (const selector of [
     ".variant-slider",
-    ".song-swipe",
+    ".song-step",
     ".mute",
     ".solo",
     ".transport button",

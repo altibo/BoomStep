@@ -42,121 +42,95 @@ function expectSong(s, color, label) {
   for (const k of Object.keys(s))
     expect(near(s[k], AMBER, 40), `${label} ${k} is amber-like`).toBe(false);
 }
-async function grab(page, track) {
-  const p = center(await page.locator(`[data-swipe="${track}"]`).boundingBox());
-  await page.mouse.move(p.x, p.y);
-  await page.mouse.down();
-  return p;
+async function tap(page, track, side, n = 1) {
+  const b = await page.locator(`[data-songcell="${track}"]`).boundingBox();
+  for (let i = 0; i < n; i++)
+    await page.mouse.click(
+      b.x + b.width * (side > 0 ? 0.8 : 0.2),
+      b.y + b.height / 2,
+    );
 }
 const settle = (page) => page.waitForTimeout(650);
-for (const motion of ["no-preference", "reduce"]) {
-  test(`whole surface follows the swiped song: preview, pending, cancel (${motion})`, async ({
-    page,
-  }) => {
-    await page.emulateMedia({ reducedMotion: motion });
-    await page.goto("/");
-    const songs = await page.evaluate(() =>
-      window.boomstep.songs.map((s) => s.color),
-    );
-    await page.locator("#play").click();
-    await settle(page);
-    expectSong(await surface(page), songs[0], "start");
-    await page.waitForFunction(
-      () => window.boomstep.engine.clock.step % 16 === 1,
-    );
-    // preview Lindenfrost on Stabs: accents switch at once, background settles after the fade
-    let p = await grab(page, 2);
-    await page.mouse.move(p.x + 100, p.y, { steps: 3 });
-    const immediate = await surface(page);
-    for (const k of accentKeys)
-      expect(near(immediate[k], hex(songs[2])), `immediate ${k}`).toBe(true);
-    if (motion === "reduce")
-      expect(near(immediate.themeBg, hex(songs[2]))).toBe(true);
-    await page.waitForTimeout(450);
-    const preview = await surface(page);
-    expectSong(preview, songs[2], "preview");
-    if (motion === "no-preference")
-      await page.screenshot({ path: `${out}/preview-lindenfrost-390x844.png` });
-    await page.mouse.up();
-    expect(
-      await page.evaluate(
-        () => window.boomstep.engine.clock.pending.get(2)?.song,
-      ),
-    ).toBe(2);
-    await page.waitForTimeout(450);
-    const pending = await surface(page);
-    expectSong(pending, songs[2], "pending");
-    expect(
-      await page.evaluate(
-        () => window.boomstep.engine.clock.pending.get(2)?.song,
-      ),
-    ).toBe(2);
-    // amber only on the queued song cell (and orbit marker), not on the surface
-    expect(
-      near(
-        (
-          await page
-            .locator('[data-swipe="2"]')
-            .evaluate((e) => getComputedStyle(e).borderTopColor)
-        )
-          .match(/\d+/g)
-          .map(Number),
-        AMBER,
-      ),
-    ).toBe(true);
-    if (motion === "no-preference")
-      await page.screenshot({ path: `${out}/pending-lindenfrost-390x844.png` });
-    // second colour preview: Samtbunker on Riff
-    p = await grab(page, 3);
-    await page.mouse.move(
-      p.x + 28 + 64 * 7 > 380 ? p.x - 28 - 64 : p.x + 100,
-      p.y,
-      { steps: 3 },
-    );
-    const riffTarget = await page.evaluate(() =>
-      Number(document.documentElement.dataset.themeSong),
-    );
-    await settle(page);
-    expectSong(await surface(page), songs[riffTarget], "preview 2");
-    if (motion === "no-preference")
-      await page.screenshot({
-        path: `${out}/preview-song${riffTarget + 1}-390x844.png`,
+for (const motion of ["no-preference", "reduce"])
+  for (const [w, h] of [
+    [390, 844],
+    [844, 390],
+  ])
+    test(`whole surface follows the tapped target song at once, amber only on the pending field (${motion}, ${w}×${h})`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width: w, height: h });
+      await page.emulateMedia({ reducedMotion: motion });
+      await page.goto("/");
+      const songs = await page.evaluate(() =>
+        window.boomstep.songs.map((s) => s.color),
+      );
+      await page.locator("#play").click();
+      await settle(page);
+      expectSong(await surface(page), songs[0], "start");
+      await page.waitForFunction(
+        () => window.boomstep.engine.clock.step % 16 === 1,
+      );
+      // two taps right on Stabs: Lindenfrost queued; accents switch at once
+      await tap(page, 2, 1, 2);
+      const immediate = await surface(page);
+      for (const k of accentKeys)
+        expect(near(immediate[k], hex(songs[2])), `immediate ${k}`).toBe(true);
+      if (motion === "reduce")
+        expect(near(immediate.themeBg, hex(songs[2]))).toBe(true);
+      expect(
+        await page.evaluate(
+          () => window.boomstep.engine.clock.pending.get(2)?.song,
+        ),
+      ).toBe(2);
+      await page.waitForTimeout(450);
+      const pending = await surface(page);
+      expectSong(pending, songs[2], "pending");
+      const cell = await page.locator('[data-songcell="2"]').evaluate((e) => ({
+        border: getComputedStyle(e).borderTopColor,
+        name: getComputedStyle(e.querySelector(".song-name")).color,
+      }));
+      expect(near(cell.border.match(/\d+/g).map(Number), AMBER)).toBe(true);
+      expect(near(cell.name.match(/\d+/g).map(Number), hex(songs[2]))).toBe(
+        true,
+      );
+      if (motion === "no-preference")
+        await page.screenshot({
+          path: `${out}/pending-lindenfrost-${w}x${h}.png`,
+        });
+      // Riff two taps left: Samtbunker (song 9) leads the surface now
+      await tap(page, 3, -1, 2);
+      await settle(page);
+      expect(
+        await page.evaluate(() => document.documentElement.dataset.themeTrack),
+      ).toBe("3");
+      expectSong(await surface(page), songs[8], "riff target");
+      if (motion === "no-preference")
+        await page.screenshot({
+          path: `${out}/pending-two-tracks-${w}x${h}.png`,
+        });
+      // tapping back to the playing song clears that pending switch; Stabs keeps its target
+      await tap(page, 3, 1, 2);
+      await settle(page);
+      expect(
+        await page.evaluate(() => [
+          window.boomstep.engine.clock.pending.has(3),
+          window.boomstep.engine.clock.selection(2).song,
+        ]),
+      ).toEqual([false, 2]);
+      expectSong(await surface(page), songs[0], "riff back to playing song");
+      await expect(page.locator('[data-songcell="3"]')).not.toHaveClass(
+        /queued/,
+      );
+      if (motion === "reduce")
+        await page.screenshot({
+          path: `${out}/reduced-motion-pending-${w}x${h}.png`,
+        });
+      test.info().annotations.push({
+        type: "surface",
+        description: JSON.stringify({ immediate, pending }),
       });
-    // cancel zone: surface returns to the committed (pending) Lindenfrost
-    await page.mouse.move(p.x - 92, p.y - 60, { steps: 3 });
-    await expect(page.locator('[data-swipe="3"]')).toHaveClass(/canceling/);
-    await settle(page);
-    expectSong(await surface(page), songs[2], "cancel zone");
-    if (motion === "no-preference")
-      await page.screenshot({ path: `${out}/cancel-zone-390x844.png` });
-    await page.mouse.up();
-    await settle(page);
-    const cancelled = await surface(page);
-    expectSong(cancelled, songs[2], "after cancel");
-    expect(
-      await page.evaluate(() => window.boomstep.session.tracks[3].song),
-    ).toBe(0);
-    // Escape during a preview also restores
-    p = await grab(page, 0);
-    await page.mouse.move(p.x + 100, p.y, { steps: 3 });
-    await page.keyboard.press("Escape");
-    await page.mouse.up();
-    await settle(page);
-    expectSong(await surface(page), songs[2], "after escape");
-    if (motion === "reduce")
-      await page.screenshot({
-        path: `${out}/reduced-motion-pending-390x844.png`,
-      });
-    await page.evaluate(
-      (v) => (window.__surface = v),
-      JSON.stringify({ preview, pending, cancelled }),
-    );
-    test.info().annotations.push({
-      type: "surface",
-      description: JSON.stringify({ preview, pending, cancelled }),
     });
-  });
-}
 test("reduced motion: no colour transition on root; normal mode only fades the background tint", async ({
   page,
 }) => {
@@ -178,15 +152,13 @@ test("reduced motion: no colour transition on root; normal mode only fades the b
   expect(reduced.endsWith("|0s")).toBe(true);
   // background fade never passes through amber-like page tints
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  const p = await grab(page, 1);
-  await page.mouse.move(p.x + 100, p.y, { steps: 2 });
+  await tap(page, 1, 1, 3);
   for (let i = 0; i < 10; i++) {
     const s = await surface(page);
     for (const k of accentKeys) expect(near(s[k], AMBER, 40)).toBe(false);
     expect(Math.max(...s.page)).toBeLessThan(40);
     await page.waitForTimeout(40);
   }
-  await page.mouse.up();
 });
 test("REC red and Stumm/Solo states with song themes (screenshots)", async ({
   page,
@@ -222,67 +194,47 @@ test("REC red and Stumm/Solo states with song themes (screenshots)", async ({
   await page.screenshot({ path: `${out}/rec-samtbunker-390x844.png` });
   await page.locator("#record").click();
 });
-test("song cell: resting swipe chevrons, short preview cue, nothing clipped, layout unchanged", async ({
-  page,
-}) => {
-  await page.goto("/");
-  const hint = await page
-    .locator('[data-swipe="0"]')
-    .evaluate((e) => [
-      getComputedStyle(e, "::before").content,
-      getComputedStyle(e, "::after").content,
+for (const [w, h] of [
+  [390, 844],
+  [844, 390],
+  [667, 375],
+])
+  test(`song cell ${w}×${h}: visible ‹ › halves, pending names in all four tracks never clip, layout unchanged`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/");
+    const hint = await page
+      .locator('[data-songcell="0"]')
+      .evaluate((e) =>
+        [...e.querySelectorAll(".song-step i")].map((i) => [
+          i.textContent,
+          getComputedStyle(i).visibility,
+          Number(getComputedStyle(i).opacity),
+        ]),
+      );
+    expect(hint).toEqual([
+      ["‹", "visible", 1],
+      ["›", "visible", 1],
     ]);
-  expect(hint).toEqual(['"‹"', '"›"']);
-  const p = await grab(page, 2);
-  await page.mouse.move(p.x + 100, p.y, { steps: 3 });
-  const m = await page.evaluate(() =>
-    [...document.querySelectorAll(".song-line, .song-name")].map((e) => ({
-      t: e.textContent,
-      clip: e.scrollWidth - e.clientWidth,
-    })),
-  );
-  await page.mouse.up();
-  // pending state with the longest names (arrow prefix) must not clip either
-  await page.locator("#play").click();
-  for (const track of [0, 1, 2, 3]) {
-    await page.locator(`[data-swipe="${track}"]`).focus();
-    await page.keyboard.press("ArrowRight");
-  }
-  const pend = await page.evaluate(() =>
-    [...document.querySelectorAll(".song-line, .song-name")].map((e) => ({
-      t: e.textContent,
-      clip: e.scrollWidth - e.clientWidth,
-    })),
-  );
-  m.push(...pend);
-  for (const name of [
-    "Lindenfrost",
-    "Mitternacht",
-    "Tiefgarage",
-    "Schwarzlicht",
-  ]) {
-    const i = await page.evaluate(
-      (n) => window.boomstep.songs.findIndex((s) => s.name === n),
-      name,
-    );
-    await page.locator('[data-swipe="1"]').focus();
-    await page.keyboard.press("Home");
-    for (let k = 0; k < i; k++) await page.keyboard.press("ArrowRight");
-    m.push(
-      ...(await page.evaluate(() =>
-        [...document.querySelectorAll(".song-name")].map((e) => ({
+    const clips = () =>
+      page.evaluate(() =>
+        [...document.querySelectorAll(".song-line, .song-name")].map((e) => ({
           t: e.textContent,
           clip: e.scrollWidth - e.clientWidth,
         })),
-      )),
-    );
-  }
-  for (const x of m) expect(x.clip, x.t).toBeLessThanOrEqual(0);
-  expect(m.some((x) => x.t.includes("→ los ✓"))).toBe(true);
-  expect(
-    await page.evaluate(
+      );
+    await page.locator("#play").click();
+    const m = [];
+    for (let k = 0; k < 10; k++) {
+      for (const track of [0, 1, 2, 3]) await tap(page, track, 1);
+      m.push(...(await clips()));
+    }
+    for (const x of m) expect(x.clip, x.t).toBeLessThanOrEqual(0);
+    expect(m.some((x) => x.t.includes("→ ab T"))).toBe(true);
+    const bottom = await page.evaluate(
       () =>
         document.querySelector("#performance").getBoundingClientRect().bottom,
-    ),
-  ).toBeLessThanOrEqual(822);
-});
+    );
+    expect(bottom).toBeLessThanOrEqual(w > h ? h : 822);
+  });

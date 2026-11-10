@@ -25,7 +25,7 @@ test("all performance controls are inline; portrait layouts are visible and touc
       ),
     ).toBeTruthy();
     for (const sel of [
-      ".song-swipe",
+      ".song-step",
       ".variant-slider",
       ".mute",
       ".solo",
@@ -47,6 +47,9 @@ test("all performance controls are inline; portrait layouts are visible and touc
     console.log("Performance layout", width, height, bounds);
     if (width === 390 && height === 844)
       expect(bounds.y + bounds.height).toBeLessThanOrEqual(822);
+    // landscape is the main layout now: every musical control on the first screen
+    else if (width > height)
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
     else expect(bounds.y + bounds.height).toBeGreaterThan(height);
     await page.screenshot({
       path: `test-results/artifacts/songs-${width}x${height}.png`,

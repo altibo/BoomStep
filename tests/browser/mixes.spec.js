@@ -92,32 +92,28 @@ test("offline sample mixes (2 songs, switches, specials, max Krassheit) export v
     Math.abs(sw.firstHalf.centroidHz - sw.secondHalf.centroidHz),
   ).toBeGreaterThan(20);
 });
-test("live REC captures sample playback, a swiped song switch and stays below full scale", async ({
+test("live REC captures sample playback, tapped song switches and stays below full scale (landscape 844×390)", async ({
   page,
 }) => {
   test.setTimeout(60000);
+  await page.setViewportSize({ width: 844, height: 390 });
   await page.goto("/");
   await page.locator("#record").click();
   await page.waitForFunction(() => window.boomstep.engine.clock.step > 2);
-  const cell = page.locator('[data-swipe="1"]');
-  const b = await cell.boundingBox();
-  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(b.x + b.width / 2 + 40 + 64 * 4, b.y + b.height / 2, {
-    steps: 4,
-  });
-  await page.mouse.up();
+  // tap the song halves (landscape main layout): Bass 5× right, Stabs 3× left
+  const tapHalf = async (track, side, n) => {
+    const b = await page.locator(`[data-songcell="${track}"]`).boundingBox();
+    for (let i = 0; i < n; i++)
+      await page.mouse.click(
+        b.x + b.width * (side > 0 ? 0.8 : 0.2),
+        b.y + b.height / 2,
+      );
+  };
+  await tapHalf(1, 1, 5);
   const at = await page.evaluate(
     () => window.boomstep.engine.clock.pending.get(1).at,
   );
-  const st = page.locator('[data-swipe="2"]');
-  const c = await st.boundingBox();
-  await page.mouse.move(c.x + c.width / 2, c.y + c.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(c.x + c.width / 2 - 40 - 64 * 2, c.y + c.height / 2, {
-    steps: 4,
-  });
-  await page.mouse.up();
+  await tapHalf(2, -1, 3);
   await page.waitForFunction(
     (at) => window.boomstep.engine.clock.step > at + 40,
     at,
@@ -136,7 +132,7 @@ test("live REC captures sample playback, a swiped song switch and stays below fu
         Array.from(new Uint8Array(await (await fetch(a.href)).arrayBuffer())),
       ),
   );
-  await writeFile(`${out}/live-rec-swipe-switch.wav`, bytes);
+  await writeFile(`${out}/live-rec-tap-switch.wav`, bytes);
   const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength),
     rate = v.getUint32(24, true),
     frames = (bytes.length - 44) / 4,
