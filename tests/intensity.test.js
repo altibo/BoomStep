@@ -4,7 +4,7 @@ import {
   initialSession,
   validateSession,
   eventsAt,
-  PACKS,
+  SONGS,
   PatternClock,
 } from "../src/music.js";
 import {
@@ -14,14 +14,20 @@ import {
   intensityName,
 } from "../src/intensity.js";
 import { fxTargets, panicSession } from "../src/fx.js";
+import { contrast, hexRgb } from "../src/theme.js";
 test("old V3 sessions gain neutral macro/light defaults; new fields roundtrip and reject unsafe data", () => {
-  const old = initialSession();
+  const old = { ...initialSession(), version: 3, pack: 6 };
   delete old.intensity;
   delete old.beatLights;
+  delete old.themeTrack;
+  old.tracks = old.tracks.map(({ song: _song, ...t }) => t);
   const migrated = validateSession(old);
   assert.equal(migrated.intensity, 0);
   assert.equal(migrated.beatLights, true);
-  assert.deepEqual(migrated.tracks, old.tracks);
+  assert.deepEqual(
+    migrated.tracks.map(({ song: _song, ...t }) => t),
+    old.tracks,
+  );
   for (const value of [0, 0.5, 1]) {
     const s = { ...migrated, intensity: value, beatLights: false };
     assert.deepEqual(validateSession(JSON.parse(JSON.stringify(s))), s);
@@ -58,16 +64,17 @@ test("macro targets progress without rewriting any manual baseline and zero is n
 });
 test("grid density grows deterministically, keeps base events and never alters patterns or harmony", () => {
   const counts = [0, 0, 0];
-  for (let p = 0; p < PACKS.length; p++)
+  for (let p = 0; p < SONGS.length; p++)
     for (let t = 0; t < 4; t++)
       for (let v = 0; v < 4; v++)
         for (let step = 0; step < 128; step++) {
-          const base = eventsAt(p, t, v, step),
+          const choices = [0, 1, 2, 3].map(() => ({ song: p, variant: v })),
+            base = eventsAt(choices, t, step),
             before = structuredClone(base);
           [0, 0.5, 1].forEach((a, i) => {
-            const out = intensityEvents(base, t, step, a, PACKS[p]);
+            const out = intensityEvents(base, t, step, a, choices);
             counts[i] += out.length;
-            assert.deepEqual(out, intensityEvents(base, t, step, a, PACKS[p]));
+            assert.deepEqual(out, intensityEvents(base, t, step, a, choices));
             assert.ok(out.length >= base.length);
             assert.ok(out.every((e) => e.velocity > 0 && e.velocity <= 1));
             if (!a) assert.deepEqual(out, base);
@@ -80,12 +87,12 @@ test("macro does not reset shared clock or overwrite a pending user pattern", ()
   const s = initialSession(),
     clock = new PatternClock(s);
   for (let i = 0; i < 20; i++) clock.tick();
-  clock.queue(1, 2, true);
+  clock.queue(1, { variant: 2 }, true);
   const q = structuredClone(clock.pending.get(1));
   s.intensity = 1;
   for (let i = 20; i < 32; i++) assert.equal(clock.tick().step, i);
   assert.deepEqual(clock.pending.get(1), q);
-  assert.equal(clock.tick().variants[1], 2);
+  assert.equal(clock.tick().choices[1].variant, 2);
 });
 test("FX AUS also returns macro to neutral, preserving patterns/mutes/solo/volumes and light preference", () => {
   const s = initialSession();
@@ -128,17 +135,18 @@ test("clock light envelope has bounded frequency, local amplitude and no motion 
   assert.equal(intensityName(0.5), "Druck");
   assert.equal(intensityName(1), "Abriss");
 });
-test("all macro accent colors keep readable active-pattern foreground contrast", () => {
-  const lum = (rgb) =>
-      rgb
-        .map((n) => n / 255)
-        .map((n) => (n <= 0.04045 ? n / 12.92 : ((n + 0.055) / 1.055) ** 2.4))
-        .reduce((a, v, i) => a + v * [0.2126, 0.7152, 0.0722][i], 0),
-    dark = lum([6, 36, 47]);
-  for (let i = 0; i <= 100; i++) {
-    const c = lightState(i / 100, 0, 152, false, true, false)
-      .rgb.split(",")
-      .map(Number);
-    assert.ok((lum(c) + 0.05) / (dark + 0.05) >= 4.5);
-  }
+test("Krassheit lifts every song colour toward white and keeps dark thumb text readable (≥ 4.5:1)", () => {
+  const dark = hexRgb("#06101d");
+  for (const song of SONGS)
+    for (let i = 0; i <= 100; i++) {
+      const x = lightState(i / 100, 0, 150, false, true, false, song.color),
+        c = x.rgb.split(",").map(Number);
+      assert.ok(contrast(c, dark) >= 4.5, `${song.name} ${i}`);
+      assert.ok(c.every((v, k) => v >= hexRgb(song.color)[k]));
+    }
+  assert.equal(lightState(0, 0, 150, false, true, false, "#40d4f2").lift, "0%");
+  assert.equal(
+    lightState(1, 0, 150, false, true, false, "#40d4f2").lift,
+    "22%",
+  );
 });

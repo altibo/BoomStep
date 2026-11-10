@@ -18,9 +18,7 @@ test("effective Solo UI matches mixer: one/multiple solos, mute priority and tog
         "data-silence-reason",
         labels[i] === "Stumm" ? "mute" : silent ? "solo" : "",
       );
-      await expect(card.locator(".pattern.active .pattern-cue")).toHaveText(
-        labels[i],
-      );
+      await expect(card.locator(".song-cue")).toHaveText(labels[i]);
       await expect(page.locator(`[data-mute="${i}"]`)).toHaveAttribute(
         "aria-pressed",
         String(mutes[i]),
@@ -32,9 +30,9 @@ test("effective Solo UI matches mixer: one/multiple solos, mute priority and tog
         mutes[i],
       );
       if (silent)
-        expect(
-          await card.locator(".pattern-cue").allTextContents(),
-        ).not.toContain("Spielt");
+        expect(await card.locator(".song-cue").allTextContents()).not.toContain(
+          "Spielt",
+        );
       if (silent)
         await expect
           .poll(() =>
@@ -63,8 +61,8 @@ test("effective Solo UI matches mixer: one/multiple solos, mute priority and tog
       ui: [...document.querySelectorAll(".track")].map((e) => ({
         mixAudible: e.dataset.mixAudible,
         silenceReason: e.dataset.silenceReason,
-        active: e.querySelector(".pattern.active").dataset.variant,
-        label: e.querySelector(".pattern.active .pattern-cue").textContent,
+        active: e.querySelector(".stop.active").dataset.variant,
+        label: e.querySelector(".song-cue").textContent,
         background: getComputedStyle(e).backgroundColor,
       })),
       gain: window.boomstep.engine.strips.map((s) => s.gain.gain.value),
@@ -153,23 +151,19 @@ test("solo exclusion preserves active position and pending amber through cancel;
     () => window.boomstep.engine.clock.step % 16 === 2,
   );
   await page.locator('[data-track="0"][data-variant="3"]').click();
-  await expect(
-    page.locator("#track-0 .pattern.active .pattern-cue"),
-  ).toHaveText("Solo-aus");
-  await expect(
-    page.locator("#track-1 .pattern.active .pattern-cue"),
-  ).toHaveText("Spielt");
+  await expect(page.locator("#track-0 .song-cue")).toHaveText("Solo-aus");
+  await expect(page.locator("#track-1 .song-cue")).toHaveText("Spielt");
   await expect(page.locator('[data-mute="0"]')).toHaveAttribute(
     "aria-pressed",
     "false",
   );
-  await expect(page.locator("#track-0 .pattern.queued")).toHaveAttribute(
+  await expect(page.locator("#track-0 .stop.queued")).toHaveAttribute(
     "data-variant",
     "3",
   );
   expect(
     await page
-      .locator("#track-0 .pattern.queued")
+      .locator("#track-0 .stop.queued")
       .evaluate((e) => getComputedStyle(e).borderTopColor),
   ).toBe("rgb(255, 188, 77)");
   await page.screenshot({ path: `${out}/viewport-hold-bass-solo-pending.png` });
@@ -192,7 +186,7 @@ test("solo exclusion preserves active position and pending amber through cancel;
     "data-gesture",
     "cancel",
   );
-  await expect(page.locator("#track-0 .pattern.queued")).toHaveAttribute(
+  await expect(page.locator("#track-0 .stop.queued")).toHaveAttribute(
     "data-variant",
     "3",
   );
@@ -208,9 +202,7 @@ test("solo exclusion preserves active position and pending amber through cancel;
       }),
     ),
   ).toBe(before);
-  await expect(
-    page.locator("#track-0 .pattern.active .pattern-cue"),
-  ).toHaveText("Solo-aus");
+  await expect(page.locator("#track-0 .song-cue")).toHaveText("Solo-aus");
 });
 
 test("Solo-aus labels remain unclipped and layout unchanged at 390px and 320px", async ({
@@ -226,9 +218,7 @@ test("Solo-aus labels remain unclipped and layout unchanged at 390px and 320px",
       bottom:
         document.querySelector("#performance").getBoundingClientRect().bottom +
         scrollY,
-      labels: [
-        ...document.querySelectorAll(".pattern.active .pattern-cue"),
-      ].map((e) => ({
+      labels: [...document.querySelectorAll(".song-cue")].map((e) => ({
         text: e.textContent,
         clipped:
           e.scrollWidth > e.clientWidth || e.scrollHeight > e.clientHeight,
@@ -236,7 +226,7 @@ test("Solo-aus labels remain unclipped and layout unchanged at 390px and 320px",
       })),
     }));
     expect(result.overflow).toBe(false);
-    expect(result.bottom).toBe(width === 390 ? 822 : 936);
+    expect(result.bottom).toBe(width === 390 ? 822 : 872);
     expect(result.labels.map((x) => x.text)).toEqual([
       "Solo-aus",
       "Auswahl",

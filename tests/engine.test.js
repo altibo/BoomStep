@@ -26,7 +26,7 @@ test("late timer skips stale steps with phase retained and queued changes applie
   e.note = () => {};
   e.duckAt = () => {};
   e.clock.step = 1;
-  e.clock.queue(1, 2, true);
+  e.clock.queue(1, { variant: 2 }, true);
   e.pump();
   assert.equal(e.session.tracks[1].variant, 2);
   assert.equal(e.clock.pending.size, 0);
