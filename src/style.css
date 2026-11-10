@@ -166,7 +166,7 @@ h2 {
 .track-top {
   display: grid;
   align-items: center;
-  grid-template-columns: 108px minmax(0, 1fr) 44px 44px;
+  grid-template-columns: 188px minmax(0, 1fr);
   gap: 2px;
   height: 44px;
 }
@@ -194,8 +194,9 @@ h2 {
 }
 .track-bottom {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
+  align-items: center;
+  grid-template-columns: 44px 44px repeat(3, minmax(0, 1fr));
+  gap: 2px 6px;
   height: 44px;
 }
 .mini {
@@ -560,7 +561,7 @@ footer {
 }
 @media (max-width: 359px) {
   .track-top {
-    grid-template-columns: 104px minmax(0, 1fr) 44px 44px;
+    grid-template-columns: 180px minmax(0, 1fr);
   }
   .fx-section {
     grid-template-columns: 160px minmax(0, 1fr);
@@ -729,70 +730,63 @@ header {
   color: #eff5fa;
 }
 
-/* Song tap cell (two halves: ‹ previous | next ›) + four-detent pattern slider. */
+/* Song cell: three zones – ‹ button | display only (track, status, song) | › button. */
 .song-cell {
-  position: relative;
-  container-type: inline-size;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  gap: 2px;
   height: 44px;
-  min-width: 88px;
-  padding: 3px 11px;
-  border-radius: 9px;
-  border: 1px solid color-mix(in srgb, var(--song) 50%, var(--line));
-  background: color-mix(in srgb, var(--song) 14%, #0a1520);
+  min-width: 140px;
   user-select: none;
-  overflow: hidden;
-  text-align: center;
-}
-.song-cell::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 8px;
-  bottom: 8px;
-  border-left: 1px dashed color-mix(in srgb, var(--song) 35%, #3b5366);
-  pointer-events: none;
 }
 .song-step {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 50%;
+  min-width: 44px;
   min-height: 44px;
+  height: 44px;
   margin: 0;
   padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: color-mix(in srgb, var(--song) 70%, #a9bccb);
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--song) 55%, var(--line));
+  background: color-mix(in srgb, var(--song) 20%, #132331);
+  color: #eff5fa;
   touch-action: manipulation;
   cursor: pointer;
-  z-index: 1;
-}
-.song-prev {
-  left: 0;
-  text-align: left;
-}
-.song-next {
-  right: 0;
-  text-align: right;
+  transition: background-color 150ms ease-out;
 }
 .song-step i {
   font-style: normal;
-  font-size: 17px;
+  font-size: 22px;
   font-weight: 800;
-  line-height: 42px;
-  padding: 0 2px;
+  line-height: 40px;
 }
-.song-step:active {
-  background: color-mix(in srgb, var(--song) 22%, transparent);
+.song-step:hover {
+  border-color: color-mix(in srgb, var(--song) 80%, white);
+}
+.song-step:active,
+.song-step.hit {
+  background: color-mix(in srgb, var(--song) 55%, #132331);
+  border-color: color-mix(in srgb, var(--song) 60%, white);
+  color: white;
 }
 .song-step:focus-visible {
   outline: 2px solid white;
   outline-offset: -2px;
 }
+/* Display only: darker, borderless, no pointer action. */
+.song-display {
+  container-type: inline-size;
+  min-width: 0;
+  height: 44px;
+  padding: 3px 2px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: color-mix(in srgb, var(--song) 7%, #070f17);
+  text-align: center;
+  pointer-events: none;
+  cursor: default;
+}
 .song-line {
   display: block;
-  margin: 0 -4px;
   height: 16px;
   font-size: 11px;
   line-height: 16px;
@@ -800,7 +794,6 @@ header {
   overflow: hidden;
   text-overflow: ellipsis;
   color: #dce8ef;
-  pointer-events: none;
 }
 .track-label {
   font-size: 11px;
@@ -812,18 +805,17 @@ header {
 }
 .song-name {
   display: block;
-  margin: 0 -2px;
   height: 20px;
   font-size: 12px;
   font-weight: 800;
   line-height: 20px;
+  letter-spacing: -0.15px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--song);
-  pointer-events: none;
 }
-.song-cell.queued {
+.song-cell.queued .song-display {
   border: 1px dashed var(--amber);
   box-shadow: inset 0 0 0 1px var(--amber);
 }
@@ -909,7 +901,7 @@ header {
   outline: 2px dashed #e3edf3;
   outline-offset: -2px;
 }
-.inaudible .song-cell {
+.inaudible .song-display {
   background: #0d161e;
 }
 .inaudible .song-name,
@@ -953,7 +945,7 @@ header {
       max(4px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
   }
   #performance {
-    --xyw: clamp(150px, 19vw, 210px);
+    --xyw: clamp(160px, calc(19vw + 28px), 238px);
     display: grid;
     --g: 4px;
     grid-template-columns: calc(50% - var(--g)) 44px minmax(0, 1fr) var(--xyw);
@@ -995,7 +987,7 @@ header {
     justify-content: center;
   }
   .track-top {
-    grid-template-columns: clamp(108px, 31%, 132px) minmax(0, 1fr) 44px 44px;
+    grid-template-columns: clamp(186px, 46%, 210px) minmax(0, 1fr);
   }
   .mix-strip {
     grid-area: mix;
@@ -1050,6 +1042,7 @@ header {
   }
   .xy-axis {
     grid-area: axis;
+    margin: 0 0 0 6px;
     height: 14px;
     line-height: 14px;
     text-align: center;
@@ -1064,11 +1057,15 @@ header {
     width: auto;
     height: auto;
     min-height: 120px;
+    /* ≥ 28px from the right/bottom screen edge (plus safe area via main padding), 6px
+       extra air towards the specials pads. */
+    margin: 0 22px 6px 6px;
     border-radius: 18px;
   }
   .xy-depth,
   #xy-hint {
     grid-area: depth;
+    margin: 0 0 0 6px;
     height: 14px;
     line-height: 14px;
     text-align: center;
@@ -1136,9 +1133,12 @@ header {
   .track {
     padding: 0 3px;
   }
+  #xy {
+    margin-bottom: 10px;
+  }
 }
 /* Narrow song cells: abbreviated track label (DR/BA/ST/RF) so the cue never clips. */
-@container (max-width: 114px) {
+@container (max-width: 84px) {
   .label-long {
     display: none;
   }

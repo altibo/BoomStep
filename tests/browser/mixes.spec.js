@@ -100,14 +100,15 @@ test("live REC captures sample playback, tapped song switches and stays below fu
   await page.goto("/");
   await page.locator("#record").click();
   await page.waitForFunction(() => window.boomstep.engine.clock.step > 2);
-  // tap the song halves (landscape main layout): Bass 5× right, Stabs 3× left
+  // tap the ‹/› song buttons (landscape main layout): Bass 5× right, Stabs 3× left
   const tapHalf = async (track, side, n) => {
-    const b = await page.locator(`[data-songcell="${track}"]`).boundingBox();
+    const b = await page
+      .locator(
+        `[data-songcell="${track}"] ${side > 0 ? ".song-next" : ".song-prev"}`,
+      )
+      .boundingBox();
     for (let i = 0; i < n; i++)
-      await page.mouse.click(
-        b.x + b.width * (side > 0 ? 0.8 : 0.2),
-        b.y + b.height / 2,
-      );
+      await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
   };
   await tapHalf(1, 1, 5);
   const at = await page.evaluate(

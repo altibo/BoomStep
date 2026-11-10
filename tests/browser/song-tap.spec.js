@@ -14,12 +14,14 @@ const theme = (page) =>
     song: document.documentElement.dataset.themeSong,
     track: document.documentElement.dataset.themeTrack,
   }));
-// Point inside the left (-1) or right (+1) half of a track's song cell.
+// Centre of a track's ‹ (side −1) or › (side +1) button.
 async function half(page, track, side) {
-  const cell = page.locator(`[data-songcell="${track}"]`);
-  await cell.scrollIntoViewIfNeeded();
-  const b = await cell.boundingBox();
-  return { x: b.x + b.width * (side > 0 ? 0.8 : 0.2), y: b.y + b.height / 2 };
+  const btn = page.locator(
+    `[data-songcell="${track}"] ${side > 0 ? ".song-next" : ".song-prev"}`,
+  );
+  await btn.scrollIntoViewIfNeeded();
+  const b = await btn.boundingBox();
+  return { x: b.x + b.width / 2, y: b.y + b.height / 2 };
 }
 async function tap(page, track, side) {
   const p = await half(page, track, side);
@@ -66,7 +68,7 @@ test("tap right half = next song: queued for the next bar, field shows target na
     const cs = (s) => getComputedStyle(document.querySelector(s));
     return {
       name: cs("#name-2").color,
-      border: cs('[data-songcell="2"]').borderTopColor,
+      border: cs('[data-songcell="2"] .song-display').borderTopColor,
       cue: cs("#song-cue-2").color,
       card: document.querySelector("#track-2").style.getPropertyValue("--song"),
     };
@@ -137,45 +139,100 @@ test("tap left half = previous song and wraps 1 → 10; tapping back to the play
     await page.evaluate(() => window.boomstep.session.tracks[1].song),
   ).toBe(3);
 });
-test("song field: two ≥44px halves with visible ‹ › hints, button roles, keyboard Enter/arrows, ARIA labels name the neighbour", async ({
+for (const [w, h] of [
+  [390, 844],
+  [844, 390],
+  [667, 375],
+  [320, 568],
+])
+  test(`song field ${w}×${h}: three zones ‹ | display | ›, buttons ≥44px, name never under a button, middle tap does nothing`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/");
+    await page.locator("#play").click();
+    await page.waitForFunction(() => window.boomstep.engine.clock.step > 1);
+    for (const track of [0, 1, 2, 3]) {
+      const m = await page.evaluate((t) => {
+        const box = (e) => e.getBoundingClientRect().toJSON();
+        const cell = document.querySelector(`[data-songcell="${t}"]`);
+        const [prev, display, next] = [
+          ".song-prev",
+          ".song-display",
+          ".song-next",
+        ].map((s) => cell.querySelector(s));
+        const d = box(display);
+        const hitMid = document.elementFromPoint(
+          d.left + d.width / 2,
+          d.top + d.height / 2,
+        );
+        const ps = (e) => getComputedStyle(e);
+        return {
+          prev: box(prev),
+          display: d,
+          next: box(next),
+          name: box(cell.querySelector(".song-name")),
+          line: box(cell.querySelector(".song-line")),
+          midIsButton: !!hitMid?.closest("button"),
+          displayPointer: ps(display).pointerEvents,
+          prevBg: ps(prev).backgroundColor,
+          displayBg: ps(display).backgroundColor,
+          prevBorder: ps(prev).borderTopStyle,
+          chev: [prev, next].map((b) => [
+            b.querySelector("i").textContent,
+            parseFloat(ps(b.querySelector("i")).fontSize),
+          ]),
+          nameFont: parseFloat(ps(cell.querySelector(".song-name")).fontSize),
+          roles: [cell.getAttribute("role"), prev.tagName, next.tagName],
+        };
+      }, track);
+      expect(m.roles).toEqual(["group", "BUTTON", "BUTTON"]);
+      for (const b of [m.prev, m.next]) {
+        expect(b.width).toBeGreaterThanOrEqual(44);
+        expect(b.height).toBeGreaterThanOrEqual(44);
+      }
+      // strict left-to-right order, no overlap: ‹ | display | ›
+      expect(m.prev.right).toBeLessThanOrEqual(m.display.left);
+      expect(m.display.right).toBeLessThanOrEqual(m.next.left);
+      // texts stay inside the display, never under a tap zone
+      for (const t of [m.name, m.line]) {
+        expect(t.left).toBeGreaterThanOrEqual(m.prev.right);
+        expect(t.right).toBeLessThanOrEqual(m.next.left);
+      }
+      expect(m.midIsButton).toBe(false);
+      expect(m.displayPointer).toBe("none");
+      expect(m.prevBg).not.toBe(m.displayBg); // buttons look different from the display
+      expect(m.prevBorder).toBe("solid");
+      expect(m.chev).toEqual([
+        ["‹", 22],
+        ["›", 22],
+      ]);
+      expect(m.nameFont).toBeGreaterThanOrEqual(11);
+      // tapping the name area changes nothing
+      const d = m.display;
+      await page.mouse.click(d.x + d.width / 2, d.y + d.height / 2);
+      await page.mouse.click(d.x + 4, d.y + d.height / 2);
+      await page.mouse.click(d.right - 4, d.y + d.height / 2);
+      expect((await pendingSongs(page))[track]).toBe(null);
+      await expect(page.locator(`[data-songcell="${track}"]`)).not.toHaveClass(
+        /queued/,
+      );
+    }
+    // ‹/› still step, with a short pressed flash on the hit button
+    await tap(page, 0, 1);
+    const next = page.locator('[data-songcell="0"] .song-next');
+    await expect(next).toHaveClass(/hit/);
+    await expect(next).not.toHaveClass(/hit/, { timeout: 600 });
+    expect((await pendingSongs(page))[0]).toBe(1);
+    await tap(page, 0, -1);
+    await tap(page, 0, -1);
+    expect((await pendingSongs(page))[0]).toBe(9);
+  });
+test("song field: button roles, keyboard Enter/Space/arrows, ARIA labels name the neighbour", async ({
   page,
 }) => {
   await page.goto("/");
   const list = await songs(page);
-  for (const track of [0, 1, 2, 3]) {
-    const m = await page.evaluate((t) => {
-      const box = (e) => e.getBoundingClientRect().toJSON();
-      const cell = document.querySelector(`[data-songcell="${t}"]`);
-      const [prev, next] = [".song-prev", ".song-next"].map((s) =>
-        cell.querySelector(s),
-      );
-      return {
-        cell: box(cell),
-        prev: box(prev),
-        next: box(next),
-        chev: [prev, next].map((b) => {
-          const i = b.querySelector("i");
-          return [
-            i.textContent,
-            parseFloat(getComputedStyle(i).fontSize),
-            box(i).width,
-          ];
-        }),
-        roles: [cell.getAttribute("role"), prev.tagName, next.tagName],
-      };
-    }, track);
-    expect(m.roles).toEqual(["group", "BUTTON", "BUTTON"]);
-    for (const h of [m.prev, m.next]) {
-      expect(h.width).toBeGreaterThanOrEqual(44);
-      expect(h.height).toBeGreaterThanOrEqual(44);
-    }
-    expect(m.prev.right).toBeLessThanOrEqual(m.next.left + 0.5); // no overlap
-    expect(
-      Math.abs(m.prev.right - (m.cell.left + m.cell.width / 2)),
-    ).toBeLessThan(2);
-    expect(m.chev.map((c) => c[0])).toEqual(["‹", "›"]);
-    for (const c of m.chev) expect(c[1]).toBeGreaterThanOrEqual(11);
-  }
   await expect(page.locator('[data-songcell="0"] .song-next')).toHaveAttribute(
     "aria-label",
     new RegExp(`nächster Song ${list[1][0]}`),

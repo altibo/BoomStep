@@ -42,12 +42,13 @@ function expectSong(s, color, label) {
     expect(near(s[k], AMBER, 40), `${label} ${k} is amber-like`).toBe(false);
 }
 async function tap(page, track, side, n = 1) {
-  const b = await page.locator(`[data-songcell="${track}"]`).boundingBox();
+  const b = await page
+    .locator(
+      `[data-songcell="${track}"] ${side > 0 ? ".song-next" : ".song-prev"}`,
+    )
+    .boundingBox();
   for (let i = 0; i < n; i++)
-    await page.mouse.click(
-      b.x + b.width * (side > 0 ? 0.8 : 0.2),
-      b.y + b.height / 2,
-    );
+    await page.mouse.click(b.x + b.width / 2, b.y + b.height / 2);
 }
 const settle = (page) => page.waitForTimeout(650);
 for (const motion of ["no-preference", "reduce"])
@@ -86,7 +87,8 @@ for (const motion of ["no-preference", "reduce"])
       const pending = await surface(page);
       expectSong(pending, songs[2], "pending");
       const cell = await page.locator('[data-songcell="2"]').evaluate((e) => ({
-        border: getComputedStyle(e).borderTopColor,
+        border: getComputedStyle(e.querySelector(".song-display"))
+          .borderTopColor,
         name: getComputedStyle(e.querySelector(".song-name")).color,
       }));
       expect(near(cell.border.match(/\d+/g).map(Number), AMBER)).toBe(true);

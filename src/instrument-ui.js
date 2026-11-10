@@ -29,7 +29,3 @@ export function glideEntry(previous, current) {
 export function ribbonCancelled(y, rect, margin = 24) {
   return y < rect.top - margin || y > rect.bottom + margin;
 }
-// Song field tap: left half = previous song, right half = next song (circular list).
-export function songTapStep(x, rect) {
-  return x < rect.left + rect.width / 2 ? -1 : 1;
-}

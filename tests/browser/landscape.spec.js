@@ -53,7 +53,7 @@ async function measure(page) {
         card: box(t),
         parts: [
           ...t.querySelectorAll(
-            ".song-cell, .variant-slider, .mute, .solo, .mini",
+            ".song-prev, .song-display, .song-next, .variant-slider, .mute, .solo, .mini",
           ),
         ].map(box),
       };
@@ -141,8 +141,13 @@ for (const [w, h] of VIEWPORTS)
     expect(xy.height).toBeGreaterThanOrEqual(120);
     expect(xy.left + xy.width / 2).toBeGreaterThanOrEqual(w * 0.75);
     expect(xy.top + xy.height / 2).toBeGreaterThanOrEqual(h / 2);
-    expect(w - xy.right).toBeLessThanOrEqual(24);
-    expect(h - xy.bottom).toBeLessThanOrEqual(36);
+    // thumb corner, but ≥ 28px clear of the right/bottom edge (system gestures)
+    expect(w - xy.right).toBeGreaterThanOrEqual(28);
+    expect(w - xy.right).toBeLessThanOrEqual(40);
+    expect(h - xy.bottom).toBeGreaterThanOrEqual(28);
+    expect(h - xy.bottom).toBeLessThanOrEqual(44);
+    // visible air between the specials pads and the XY field
+    expect(xy.left - m.right[".specials"].right).toBeGreaterThanOrEqual(8);
     expect(m.minFont).toBeGreaterThanOrEqual(11);
     expect(m.clipped).toEqual([]);
     await page.screenshot({ path: `${out}/landscape-${w}x${h}.png` });
@@ -155,8 +160,7 @@ test("landscape 844×390 is fully playable: song tap, pattern, XY drag, specials
   await page.goto("/");
   await page.locator("#play").click();
   await page.waitForFunction(() => window.boomstep.engine.clock.step > 2);
-  const cell = await page.locator('[data-songcell="1"]').boundingBox();
-  await page.mouse.click(cell.x + cell.width * 0.8, cell.y + cell.height / 2);
+  await page.locator('[data-songcell="1"] .song-next').click();
   await expect(page.locator('[data-songcell="1"]')).toHaveClass(/queued/);
   expect(
     await page.evaluate(() => window.boomstep.engine.clock.pending.get(1).song),
