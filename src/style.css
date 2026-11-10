@@ -1094,11 +1094,13 @@ header {
     margin: 0 23px 12px 0;
   }
   #notice:not(:empty) {
+    /* over the bottom of the track block, never over PLAY/REC or the XY pad; taps pass */
     position: fixed;
-    left: max(6px, env(safe-area-inset-left));
+    left: 50%;
+    transform: translateX(-50%);
     bottom: max(4px, env(safe-area-inset-bottom));
     z-index: 5;
-    max-width: 40%;
+    max-width: min(44%, 420px);
     padding: 4px 8px;
     border-radius: 8px;
     background: #0b1622ee;

@@ -168,6 +168,31 @@ for (const [w, h] of VIEWPORTS)
     expect(xy.top - m.right[".fx-hold"].bottom).toBeGreaterThanOrEqual(8);
     expect(m.minFont).toBeGreaterThanOrEqual(11);
     expect(m.clipped).toEqual([]);
+    // axis labels of every XY effect fit unclipped at both ends of X
+    for (const mode of [
+      "stutter",
+      "echo",
+      "flanger",
+      "gate",
+      "drive",
+      "tape",
+      "crush",
+    ])
+      for (const x of [0, 1]) {
+        const c = await page.evaluate(
+          ([mode, x]) => {
+            const s = window.boomstep.session;
+            s.fx.mode = mode;
+            s.fx.x = x;
+            window.boomstep.refresh();
+            return [...document.querySelectorAll(".xy-axis, #xy-hint")]
+              .filter((e) => e.scrollWidth > e.clientWidth + 1)
+              .map((e) => e.textContent);
+          },
+          [mode, x],
+        );
+        expect(c, `${mode} x=${x}`).toEqual([]);
+      }
     await page.screenshot({ path: `${out}/landscape-${w}x${h}.png` });
   });
 
@@ -201,11 +226,26 @@ test("landscape 844×390 is fully playable: song tap, pattern, STUTTER tile + XY
   expect(fx.depth).toBeGreaterThan(0.6);
   expect(fx.x).toBeGreaterThan(0.6);
   expect(fx.mode).toBe("stutter");
-  await expect(page.locator("#xy-axis")).toContainText("1/32");
+  await expect(page.locator("#xy-axis")).toContainText("Slice 1/32");
   await page.screenshot({ path: `${out}/landscape-844x390-xy-held.png` });
   await page.mouse.up();
   expect(await page.evaluate(() => window.boomstep.session.fx.depth)).toBe(0);
   await expect(page.locator("#record")).toBeInViewport();
+  // the REC toast never covers PLAY/REC/Stop or the XY pad
+  await page.locator("#record").click();
+  await expect(page.locator("#notice")).not.toBeEmpty();
+  const hidden = await page.evaluate(() => {
+    const n = document.querySelector("#notice").getBoundingClientRect();
+    return [".transport", "#xy"].filter((s) => {
+      const b = document.querySelector(s).getBoundingClientRect();
+      return (
+        Math.min(n.right, b.right) > Math.max(n.left, b.left) &&
+        Math.min(n.bottom, b.bottom) > Math.max(n.top, b.top)
+      );
+    });
+  });
+  expect(hidden).toEqual([]);
+  await page.locator("#record").click();
   await expect(page.locator("#xy")).toBeInViewport({ ratio: 1 });
 });
 

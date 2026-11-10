@@ -67,7 +67,7 @@ app.innerHTML = `<main>
 <div class="transport"><button id="play" class="primary" aria-label="Musik spielen">▶ PLAY</button><button id="record" aria-pressed="false"><i></i><span>REC</span></button><button id="stop" aria-label="Stop und Takt eins">■</button></div></div>
 <section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="song-cell" data-songcell="${i}" role="group" aria-label="${name} Song: Taste links voriger, Taste rechts nächster Song, wechselt zum nächsten Takt; Pfeiltasten wechseln"><button class="song-step song-prev" data-step="-1" aria-label="${name}: voriger Song"><i aria-hidden="true">‹</i></button><div class="song-display"><span class="song-line" aria-hidden="true"><b class="track-label"><span class="label-long">${name}</span><span class="label-short">${name.slice(0, 2).toUpperCase()}</span></b> <span class="song-cue" id="song-cue-${i}"></span></span><span class="song-name" id="name-${i}" aria-live="polite"></span></div><button class="song-step song-next" data-step="1" aria-label="${name}: nächster Song"><i aria-hidden="true">›</i></button></div><div class="variant-slider" data-ribbon="${i}" role="slider" tabindex="0" aria-valuemin="1" aria-valuemax="4" aria-label="${name} Pattern-Regler, vier Stufen: ziehen wählt, loslassen merkt zum nächsten Takt vor; mehr als 24 Pixel nach oben oder unten verwirft; Pfeiltasten, Pos1 und Ende"><i class="slider-rail"></i><i class="slider-fill"></i>${PATTERN_NAMES[i].map((n, v) => `<span class="stop" data-track="${i}" data-variant="${v}" title="${n}"><b>${v + 1}</b></span>`).join("")}</div></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom"><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button>${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
 
-<div class="fxcol" aria-label="Performance-Effekte und XY-Feld"><div class="fx-pads" role="group" aria-label="XY-Effekt wählen"><button data-fx="stutter" class="fx-stutter" aria-label="Stutter: Beat-Repeat im Taktraster">STUTTER<span id="stutter-label">1/16</span></button><button data-fx="echo" aria-label="Master-Echo">M-ECHO</button><button data-fx="flanger">FLANGER</button><button data-fx="gate" aria-label="Gate, nochmals tippen wechselt 1/8 und 1/16">GATE<span id="gate-label">1/8</span></button><button data-fx="drive">DRIVE</button><button data-fx="tape" aria-label="Tape-Stop: Bremse bis Stillstand">TAPE<span>STOP</span></button><button data-fx="crush" aria-label="Bitcrush">CRUSH<span id="crush-label">5 Bit</span></button></div><div class="fx-hold"><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div><div class="xy-wrap"><strong id="xy-label" class="sr-only">STUTTER</strong><div class="xy-axis" id="xy-axis">X: Slice 1/8 · 1/16 · 1/32</div><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: Achsen je nach Effekt, siehe Beschriftung" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div><div class="xy-depth" id="xy-hint">↑ Mix · loslassen neutral</div></div></div>
+<div class="fxcol" aria-label="Performance-Effekte und XY-Feld"><div class="fx-pads" role="group" aria-label="XY-Effekt wählen"><button data-fx="stutter" class="fx-stutter" aria-label="Stutter: Beat-Repeat im Taktraster">STUTTER<span id="stutter-label">1/16</span></button><button data-fx="echo" aria-label="Master-Echo">M-ECHO</button><button data-fx="flanger">FLANGER</button><button data-fx="gate" aria-label="Gate, nochmals tippen wechselt 1/8 und 1/16">GATE<span id="gate-label">1/8</span></button><button data-fx="drive">DRIVE</button><button data-fx="tape" aria-label="Tape-Stop: Bremse bis Stillstand">TAPE<span>STOP</span></button><button data-fx="crush" aria-label="Bitcrush">CRUSH<span id="crush-label">5 Bit</span></button></div><div class="fx-hold"><button id="hold" aria-pressed="false">HOLD</button><button id="panic">FX AUS</button></div><div class="xy-wrap"><strong id="xy-label" class="sr-only">STUTTER</strong><div class="xy-axis" id="xy-axis">X: Slice 1/16 (←1/8 →1/32)</div><div id="xy" role="slider" tabindex="0" aria-label="XY Effektfeld: Achsen je nach Effekt, siehe Beschriftung" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="xy-dot"></i></div><div class="xy-depth" id="xy-hint">↑ Mix · los = neutral</div></div></div>
 </section>
 <div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="save">Speichern</button><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
@@ -297,22 +297,22 @@ function refresh() {
   const f = session.fx,
     slice = sliceName(stutterSlice(f.x));
   const axes = {
-    stutter: ["STUTTER", `X: Slice 1/8 · 1/16 · 1/32 (${slice})`, "Mix"],
+    stutter: ["STUTTER", `X: Slice ${slice} (←1/8 →1/32)`, "Mix"],
     echo: ["MASTER-ECHO", "X: Farbe dunkel ↔ hell", "Echo"],
     flanger: ["FLANGER", "X: Farbe dunkel ↔ hell", "Flanger"],
     gate: [`GATE 1/${f.division}`, "X: Farbe dunkel ↔ hell", "Gate"],
     drive: ["DRIVE", "X: Farbe dunkel ↔ hell", "Drive"],
     tape: [
       "TAPE-STOP",
-      `X: Bremse kurz ↔ lang (${tapeSeconds(f.x, (60 / BPM) * 1).toFixed(1)} s)`,
+      `X: Bremsdauer ${tapeSeconds(f.x, (60 / BPM) * 1).toFixed(1)} s`,
       "Mix",
     ],
-    crush: ["CRUSH", `X: Bits 8 ↔ 2 (${crushBits(f.x)} Bit)`, "Mix"],
+    crush: ["CRUSH", `X: ${crushBits(f.x)} Bit (←8 →2)`, "Mix"],
   }[f.mode];
   $("#xy-label").textContent = axes[0];
   $("#xy-axis").textContent = axes[1];
   $("#xy-hint").textContent =
-    `↑ ${axes[2]} · ${f.hold ? "HOLD hält" : "loslassen neutral"}`;
+    `↑ ${axes[2]} · ${f.hold ? "HOLD hält" : "los = neutral"}`;
   $("#gate-label").textContent = `1/${f.division}`;
   $("#stutter-label").textContent = slice;
   $("#crush-label").textContent = `${crushBits(f.x)} Bit`;
@@ -722,6 +722,7 @@ window.boomstep = {
     return session;
   },
   songs: SONGS,
+  refresh,
   renderDiagnostic,
   async renderDiagnosticWav(config) {
     const buffer = await renderDiagnostic(config);
