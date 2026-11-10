@@ -13,6 +13,7 @@
   - **TAPE-STOP**: Y über null bremst ab dem nächsten 16tel bis Stillstand (Tonhöhe fällt), X = Bremsdauer kurz ↔ lang; bleibt stehen bis Loslassen/FX AUS.
   - **CRUSH**: Bitcrusher, X = 8 ↔ 2 Bit, Y = Mix.
   - X ist bei M-ECHO/FLANGER/GATE/DRIVE weiterhin der Farbfilter dunkel ↔ hell.
+- **Hinweise** (z. B. REC) erscheinen im Querformat kurz in der Takt-Anzeige oben links (rote Zeile „Aufnahme läuft“, darüber „REC ns“ statt Akkord), nie als Overlay über Bedienelementen; im Hochformat unterhalb des Musikbereichs. Getestet in 6 Viewports.
 - **SAVE** heißt jetzt **Speichern** und liegt bei Öffnen/Export/Import (nicht musikalisch, Platz für Transport).
 - 4.2 (Review-Fix): Songfeld in drei Zonen ‹ | Anzeige (nicht tippbar) | ›, 150-ms-Tippblitz (bei reduzierter Bewegung statisch), Stumm/Solo in der Faderzeile, „ALLE AUF SONG…“.
 
