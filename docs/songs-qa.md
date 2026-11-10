@@ -40,7 +40,9 @@ Zusätzlich (Node, `src/theme.js` spiegelt die CSS-Mischungen): alle Flächen au
 | Max. Krassheit + Drive + 6 Specials | 0.422 | 0.848 | 0 | 3095 Hz |
 | Live-REC mit 2 gewischten Songwechseln (5,6 s) | 0.174 | 0.724 | 0 | 2168 Hz |
 
-Pattern-Varianten: kleinste relative RMS-Differenz zur Grundvariante über 160 Renders 0.073 (Schwelle 0.05). Pitch-Verschiebung je gespielter Note max. ±3 Halbtöne (Hang ±2).
+Pattern-Varianten: kleinste relative RMS-Differenz zur Grundvariante über 160 Renders 0.073 (Schwelle 0.05). Oberflächenfarbe: Akzente (`--theme`) wechseln sofort, nur `--theme-bg` blendet 0,4 s; Tests prüfen Root-Variablen und Krassheit-/Master-Regler, Orbit-Kopf, FX-Kachel, Hintergrund nach Vorschau, Vormerkung, Abbruch, Escape – identisch mit Reduced Motion, nie amberähnlich.
+
+Pitch-Verschiebung je gespielter Note max. ±3 Halbtöne (Hang ±2).
 
 ## Größe
 

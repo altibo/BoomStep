@@ -199,6 +199,12 @@ test("REC red and Stumm/Solo states with song themes (screenshots)", async ({
   await settle(page);
   await expect(page.locator("#track-0 .song-cue")).toHaveText("Solo-aus");
   await expect(page.locator("#track-3 .song-cue")).toHaveText("Stumm");
+  const clip = await page.evaluate(() =>
+    [...document.querySelectorAll(".song-line, .song-name")].map(
+      (e) => e.scrollWidth - e.clientWidth,
+    ),
+  );
+  expect(Math.max(...clip)).toBeLessThanOrEqual(0);
   await page.screenshot({ path: `${out}/mute-solo-spreekanal-390x844.png` });
   await page.locator('[data-solo="1"]').click();
   await page.locator('[data-mute="3"]').click();
