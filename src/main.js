@@ -2,6 +2,7 @@ import { intensityName, lightState } from "./intensity.js";
 import {
   ribbonVariant,
   ribbonCancelled,
+  swipeSteps,
   orbitPosition,
   orbitPoint,
   glideEntry,
@@ -11,17 +12,21 @@ import { encodeWav } from "./wav.js";
 import "./style.css";
 import {
   TRACKS,
-  NAMES,
-  namesFor,
-  PACKS,
+  PATTERN_NAMES,
+  SONGS,
+  BPM,
+  KEY,
   initialSession,
   validateSession,
   audible,
+  harmonyOf,
 } from "./music.js";
+import { chordName, wrapSong } from "./songs.js";
 import { Engine, renderDiagnostic } from "./engine.js";
 import { xyPoint, releaseFX, panicSession } from "./fx.js";
 const padFlashes = new Map(),
   ribbonGestures = new Map(),
+  swipeGestures = new Map(),
   glidePointers = new Map();
 let refreshTimer;
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -42,8 +47,8 @@ const slider = (label, key, value, track) =>
   `<label class="mini"><span>${label}</span><input aria-label="${track === undefined ? "Master" : TRACKS[track]} ${label}" data-key="${key}" ${track === undefined ? "" : `data-strip="${track}"`} type="range" min="0" max="1" step="0.01" value="${value}"></label>`;
 app.innerHTML = `<main>
 <section id="performance" aria-label="Orbit Deck Performance">
-<header><h1 class="sr-only">BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="pack">Soundpaket</label><select id="pack">${PACKS.map((p, i) => `<option value="${i}">${p.name}</option>`).join("")}</select><span class="package-meta" id="pack-meta"></span></div><label class="intensity-control" for="intensity"><span>KRASSHEIT <output id="intensity-value">0 Locker</output></span><input id="intensity" type="range" min="0" max="100" step="1" value="0" aria-label="Krassheit" aria-valuetext="0 Prozent, Locker"></label><button id="light-mode" aria-pressed="true" aria-label="Beat-Licht umschalten">LICHT<br><span>BEAT</span></button></header>
-<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="track-name"><h2>${name}</h2><span class="track-short-name" id="name-${i}"></span></div><div class="pattern-ribbon" data-ribbon="${i}" role="group" aria-label="${name} Patternband: ziehen wählt, loslassen merkt vor; mehr als 24 Pixel nach oben oder unten herausziehen verwirft; Escape bricht ab">${NAMES[i].map((n, v) => `<button class="pattern" data-track="${i}" data-variant="${v}" title="${n}" aria-label="${name}: ${n}, Pattern ${v + 1}"><b>${v + 1}</b><small class="pattern-cue"></small></button>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom">${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
+<header><h1 class="sr-only">BoomStep<span>ORBIT · <b id="transport-state">BEREIT</b></span></h1><div class="pack-select"><label class="sr-only" for="all-songs">Alle vier Spuren auf einen Song setzen</label><select id="all-songs"><option value="">ALLE SPUREN…</option>${SONGS.map((p, i) => `<option value="${i}">${i + 1} ${p.name}</option>`).join("")}</select><span class="package-meta" id="pack-meta">${BPM} BPM · ${KEY}</span></div><label class="intensity-control" for="intensity"><span>KRASSHEIT <output id="intensity-value">0 Locker</output></span><input id="intensity" type="range" min="0" max="100" step="1" value="0" aria-label="Krassheit" aria-valuetext="0 Prozent, Locker"></label><button id="light-mode" aria-pressed="true" aria-label="Beat-Licht umschalten">LICHT<br><span>BEAT</span></button></header>
+<section class="tracks" aria-label="Vier Spuren">${TRACKS.map((name, i) => `<article class="track" id="track-${i}"><div class="track-top"><div class="song-swipe" data-swipe="${i}" role="slider" tabindex="0" aria-valuemin="1" aria-valuemax="${SONGS.length}" aria-label="${name} Song: nach rechts wischen nächster, nach links voriger Song; loslassen übernimmt zum nächsten Takt; mehr als 24 Pixel nach oben oder unten verwirft; Pfeiltasten wechseln"><span class="song-line"><b class="track-label"><span class="label-long">${name}</span><span class="label-short" aria-hidden="true">${name.slice(0, 2).toUpperCase()}</span></b> <span class="song-cue" id="song-cue-${i}"></span></span><span class="song-name" id="name-${i}"></span></div><div class="variant-slider" data-ribbon="${i}" role="slider" tabindex="0" aria-valuemin="1" aria-valuemax="4" aria-label="${name} Pattern-Regler, vier Stufen: ziehen wählt, loslassen merkt zum nächsten Takt vor; mehr als 24 Pixel nach oben oder unten verwirft; Pfeiltasten, Pos1 und Ende"><i class="slider-rail"></i><i class="slider-fill"></i>${PATTERN_NAMES[i].map((n, v) => `<span class="stop" data-track="${i}" data-variant="${v}" title="${n}"><b>${v + 1}</b></span>`).join("")}</div><button class="mute" data-mute="${i}" aria-label="${name} stumm" aria-pressed="false">STUMM</button><button class="solo" data-solo="${i}" aria-label="${name} solo" aria-pressed="false">SOLO</button></div><span class="sr-only" id="pending-${i}" aria-live="polite"></span><div class="track-bottom">${slider("PEGEL", "volume", session.tracks[i].volume, i)}${slider("FILTER", "filter", 1, i)}${slider("SPUR-ECHO", "delay", session.tracks[i].delay, i)}</div></article>`).join("")}</section>
 <div class="mix-strip" aria-label="Master und Special-Pegel"><section class="master" aria-label="Direkte Mastereffekte">${slider("M-FILTER", "master", 1)}${slider("HALL", "reverb", 0.08)}${slider("DRIVE", "drive", 0.16)}${slider("PUMP", "pump", 0.7)}</section><div class="special-level">${slider("HITPEGEL", "specialLevel", session.specialLevel)}</div></div>
 <section class="fx-section" aria-label="Orbit und direkte Performanceeffekte"><div class="orbit-deck"><strong id="xy-label" class="sr-only">MASTER-ECHO</strong><div class="xy-axis">Farbe: dunkel ↔ hell</div><div class="orbit-visual"><svg id="orbit" viewBox="0 0 160 160" role="img" aria-label="Gemeinsame 8-Takt-Phase, keine Seekfunktion"><g class="orbit-bars">${Array.from(
   { length: 8 },
@@ -63,7 +68,7 @@ app.innerHTML = `<main>
 </section>
 <div id="notice" role="status"></div><a id="download" hidden>WAV herunterladen</a>
 <div class="secondary"><button id="load">Öffnen</button><button id="export-session">Export</button><button id="import-button">Import</button><button id="help" aria-expanded="false">Hilfe</button></div><input id="import-session" type="file" accept="application/json,.json" hidden>
-<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>KRASSHEIT:</b> 0 = dein unveränderter Grundmix. Mehr Krassheit ergänzt Sättigung, Kickkante, Klanghelligkeit und Pump; ab 25/50 zusätzliche Hats/Percussion, ab 55 Riff-Antworten, ab 75 kurze Grid-Ratchets im achten Takt. Keine Tempo-, Tonart- oder Patternwechsel. Deine Fader bleiben Baselines, nicht überschrieben. Klangregler gleiten in 25ms; neue Noten folgen dem Grid nach maximal 100ms Planungsvorlauf. FX AUS setzt auch Krassheit auf 0, Lautstärken/Patterns bleiben. LICHT schaltet Beat/Ruhig; System-Reduced-Motion erzwingt ruhig. Nur lokaler, weicher Audiozeit-Glow, maximal 3 Pulse/s, keine Vollbildblitze. Bei Pause keine Beatpulse. Lichtwahl wird lokal und mit der Session gespeichert.</p><p class="reset-help">FX AUS: Krassheit 0, Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>PATTERNBAND:</b> Tippen wählt wie bisher. Ziehen markiert nur eine Auswahl, ohne sie abzuspielen; erst Loslassen merkt die letzte Variante für den nächsten Takt vor. Mehr als 24px nach oben oder unten aus dem Band ziehen zeigt Abbrechen; dort loslassen verwirft nur die Auswahl. Zurück ins Band ziehen erlaubt wieder Vormerken. Escape, Systemabbruch oder Fingerverlust verwerfen ebenfalls. Keine Hörvorschau. Auf Band, XY und Specials ist Scrollen zugunsten der Musikgeste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen. Pfeiltasten im Band wählen die Nachbarvariante, Home/End die erste/letzte. Cyan = aktives Pattern/gewählter FX-Modus; ausschließlich Amber = vorgemerkter Patternwechsel; weiß = unverbindliche Ziehauswahl. Keine stufenlose Klangmischung behauptet.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. HITPEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p>Berlin Bounce ist eine eigene instrumentale Komposition: federnder Bass, knappe Kick, Swing, synthetische Bark-Stabs und Call-and-Response. Textbeschreibungen der Berliner Rap-/Bounce-Techno-Szene dienen als Inspiration; keine fremden Songs, Melodien, Vocals oder Künstlerstimme wurden kopiert.</p><p>1–4 wählen Patterns, M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel. Alle Spuren teilen die vier Akkorde; besondere Fills kommen nach acht Takten.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Die gemeinsame Reglerzeile enthält M-FILTER, Hall, Drive, Pump und HITPEGEL. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. Alte Sessions werden als Classic-Pakete übernommen. Paketwechsel setzt den Mix zurück.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Keine Samples, keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · eigene Synthese</footer></main>`;
+<div id="help-text" hidden><h2>Orbit Deck: ein sichtbares Instrument.</h2><p><b>KRASSHEIT:</b> 0 = dein unveränderter Grundmix. Mehr Krassheit ergänzt Sättigung, Kickkante, Klanghelligkeit und Pump; ab 25/50 zusätzliche Hats/Percussion, ab 55 Riff-Antworten, ab 75 kurze Grid-Ratchets im achten Takt. Keine Tempo-, Tonart- oder Patternwechsel. Deine Fader bleiben Baselines, nicht überschrieben. Klangregler gleiten in 25ms; neue Noten folgen dem Grid nach maximal 100ms Planungsvorlauf. FX AUS setzt auch Krassheit auf 0, Lautstärken/Patterns bleiben. LICHT schaltet Beat/Ruhig; System-Reduced-Motion erzwingt ruhig. Nur lokaler, weicher Audiozeit-Glow, maximal 3 Pulse/s, keine Vollbildblitze. Bei Pause keine Beatpulse. Lichtwahl wird lokal und mit der Session gespeichert.</p><p class="reset-help">FX AUS: Krassheit 0, Filter, Echo, Hall, Drive, Pump und XY neutral; Nachklang klingt aus, Schutzlimiter bleibt.</p><p><b>SONG WISCHEN:</b> Jede Spur wählt ihren Song selbst. Auf dem Songfeld nach rechts wischen = nächster Song, nach links = vorheriger (Liste ist ringförmig, ab 28px ein Schritt, je weitere 64px ein Song mehr). Während des Wischens zeigen Spurkarte und die ganze Oberfläche Farbe und Namen des Ziel-Songs als Vorschau; erst Loslassen merkt den Song für den nächsten Takt vor (Amber gestrichelt, „→ ab Tn“). Mehr als 24px nach oben oder unten aus dem Feld ziehen zeigt Abbrechen; dort loslassen, Escape, Systemabbruch oder Fingerverlust verwerfen die Vorschau und stellen die vorige Farbe wieder her. Mehrere Finger auf verschiedenen Spuren arbeiten unabhängig. Pfeiltasten links/rechts im fokussierten Songfeld wählen den Nachbarsong, Home/End den ersten/letzten. Keine Hörvorschau.</p><p><b>OBERFLÄCHENFARBE:</b> Die App nimmt die Farbe des Songs an, der zuletzt per Wischen (oder Tastatur) auf einer Spur gewählt wurde – auch schon, solange er vorgemerkt ist. Beim Start und nach „ALLE SPUREN“ führt die Drums-Spur. Die Spur mit der führenden Farbe trägt eine helle Kante. Amber bleibt ausschließlich „vorgemerkt“, Rot ausschließlich Aufnahme; kein Song verwendet diese Farbtöne. Akzentfarben wechseln sofort (keine Zwischentöne wie Amber), nur die dunkle Hintergrundtönung blendet in 0,4s weich über; mit reduzierter Bewegung alles sofort.</p><p><b>PATTERNREGLER:</b> Vier Rastpunkte pro Spur. Tippen oder Ziehen wählt; Ziehen markiert nur eine Auswahl, erst Loslassen merkt die Variante für den nächsten Takt vor. Abbruch wie beim Songfeld. Pfeiltasten wählen die Nachbarvariante, Home/End die erste/letzte. Auf Songfeld, Regler, XY und Specials ist Scrollen zugunsten der Geste gesperrt; zum Scrollen auf Beschriftungen oder Zwischenräumen ziehen.</p><p><b>ORBIT:</b> Der Ring zeigt die echte gemeinsame 8-Takt-Phrase aus der Audiozeit. 1–4 und 5–8 teilen die vier Akkorde, Fills kommen in Takt 8. Ambermarken markieren den tatsächlichen nächsten Wechselort. Der Ring ist bewusst keine Seeksteuerung. Das innere Feld bleibt dein XY-Effektinstrument.</p><p><b>STRUM:</b> Über die sechs beschrifteten Pads streichen: jeder neue Feldeintritt spielt einmal, Zurückstreichen erneut. Stillhalten spielt nie automatisch weiter. Jeder Finger hat seinen eigenen Verlauf; Abbrechen beendet nur die Geste, bereits ausgelöste Sounds klingen endlich aus. Tastatur: jedes Pad mit Enter/Leertaste.</p><p><b>LIVE SPECIALS:</b> Jeder Tap spielt genau einmal. Kein Toggle, keine Loop-Ersetzung, kein automatischer Jamstart. Auch bei Pause/Stop spielbar. Tonale Hits folgen der aktuellen Akkordphase; der Roll Fill startet sofort frei im aktuellen Tempo. Acht Special-Gruppen dürfen überlappen; weitere Taps ersetzen die älteste mit kurzer Ausblendung. HITPEGEL regelt alle Pads. ■ beendet auch Specials; FX AUS setzt nur Effekte zurück. Die Specials laufen durch Master-FX und werden in REC aufgenommen.</p><p><b>SONGS:</b> Zehn eigene dunkle Bouncy-Techno-Stücke, alle mit 150 BPM in F-Moll. Die Bass-Spur bestimmt die gemeinsame Akkordfolge; alle tonalen Spuren sind in Skalenstufen relativ zu diesem Akkord geschrieben, daher bleibt jede Song-Mischung harmonisch. Klang aus gesampelten CC0-Instrumenten (TR-808, FreePats-Bässe, Pads, E-Piano, Hang, Brass); nur der UP-SWEEP ist synthetisches Rauschen. Keine fremden Songs, Melodien, Vocals oder Künstlerstimmen kopiert. Quellen und Lizenzen: samples/CREDITS.txt.</p><p>M schaltet stumm, S solo. Durch Solo ausgeschlossene Spuren sind abgedunkelt und zeigen Solo-aus; Stumm hat Vorrang. Mehrere Solos sind gleichzeitig möglich. Die STUMM-Taste zeigt ausschließlich den ausdrücklich gesetzten Mutezustand. Amber wartet auf den nächsten Takt. Unten pro Spur: Lautstärke, Tiefpass und Spur-Echo-Pegel.</p><p><b>XY:</b> links dunkler Tiefpass, rechts schneidender Hochpass; hoch = mehr vom ausgewählten Effekt. ECHO, FLANGE, GATE oder DRIVE wählen. GATE erneut tippen wechselt 1/8 ↔ 1/16 — echtes taktsynchrones Lautstärke-Gating, kein Sample-Stutter. Im Feld ziehen, loslassen = neutral (25-ms-Rampen, vorhandene Echotails klingen aus). HOLD hält die letzte Position; HOLD ausschalten löst sie. FX AUS setzt alle Effekte und Sends zurück, nicht deine Patterns oder Lautstärken. Pfeiltasten im XY-Feld steuern Farbe/Tiefe; Escape = FX AUS.</p><p>Die gemeinsame Reglerzeile enthält M-FILTER, Hall, Drive, Pump und HITPEGEL. Die Klangfolge wiederholt vier Akkorde über die acht Takte der Phrase. Pump duckt Bass/Stabs/Riff zur hörbaren Kick. Die vier großen Effektpads verändern den tatsächlichen Audioweg und sind in der Aufnahme enthalten.</p><p>REC zeichnet den echten Stereo-Mix auf (max. 120 Audiosekunden). Nochmals tippen, dann WAV herunterladen. SAVE speichert bewusst auch vorgemerkte Pattern als neue Startauswahl; Öffnen lädt diesen lokalen Slot; Export/Import eine JSON-Datei. ALLE SPUREN setzt alle vier Spuren zum nächsten Takt auf einen Song (Mix bleibt). Alte Sessions behalten Mix, Patterns und Effekte; ihr entferntes Paket wird auf einen festen neuen Song abgebildet.</p><p>Aktueller Safari/Chrome, HTTPS und Vordergrund erforderlich. Nach Appwechsel erneut PLAY tippen. Zum Home-Bildschirm hinzufügen; nach erstmaligem vollständigem Laden offline spielbar. Alle Samples (ca. 8 MB) werden beim ersten Laden für offline gespeichert. Keine Live-KI, keine Mikrofonaufnahme. Bei sehr kleinen Displays scrollen die gleich sichtbaren Bedienfelder, statt auf winzige Ziele zu schrumpfen.</p></div><footer id="offline-state">Vordergrund-Audio · CC0-Samples</footer></main>`;
 function notice(text) {
   $("#notice").textContent = text;
 }
@@ -75,27 +80,52 @@ function syncSliders() {
         : session.tracks[Number(el.dataset.strip)][el.dataset.key];
   });
 }
+// Surface colour follows the last committed swipe's track (session.themeTrack) and its
+// selected song (pending choice included). A running swipe previews; cancel restores.
+function themeState() {
+  const live = [...swipeGestures.entries()].filter(
+    ([, g]) => !g.cancel && g.steps,
+  );
+  if (live.length) {
+    const [track, g] = live.at(-1);
+    return {
+      track,
+      song: wrapSong(engine.clock.selection(track).song + g.steps),
+      preview: true,
+    };
+  }
+  return {
+    track: session.themeTrack,
+    song: engine.clock.selection(session.themeTrack).song,
+    preview: false,
+  };
+}
 function refresh() {
   const pos = engine.position(),
-    p = PACKS[session.pack],
     orbit = orbitPosition(
       pos,
       engine.ctx?.currentTime || 0,
-      p.bpm,
+      BPM,
       engine.running,
     );
+  const theme = themeState();
   const lighting = lightState(
     session.intensity,
     orbit.progress,
-    p.bpm,
+    BPM,
     engine.running,
     session.beatLights,
     reducedMotion.matches,
+    SONGS[theme.song].color,
   );
   const root = document.documentElement;
+  root.dataset.themeSong = String(theme.song);
+  root.dataset.themeTrack = String(theme.track);
+  root.dataset.themePreview = String(theme.preview);
   for (const [key, val] of Object.entries({
-    "--cyan": lighting.accent,
-    "--accent-rgb": lighting.rgb,
+    "--theme": SONGS[theme.song].color,
+    "--theme-bg": SONGS[theme.song].color,
+    "--lift": lighting.lift,
     "--light-glow": String(lighting.glow),
   }))
     if (root.style.getPropertyValue(key) !== val)
@@ -140,17 +170,16 @@ function refresh() {
       return `<circle cx="${p.x}" cy="${p.y}" r="3"/>`;
     })
     .join("");
+  const harmony = harmonyOf(pos.choices);
   $("#orbit-status").textContent =
-    `Takt ${orbit.bar + 1}/8 · Akkord ${orbit.chord + 1}/4`;
+    `Takt ${orbit.bar + 1}/8 · Akkord ${chordName(harmony, orbit.bar * 16)}`;
   if (engine.recording)
     $("#orbit-status").textContent =
       `Takt ${orbit.bar + 1}/8 · REC ${Math.floor((engine.recordedFrames || 0) / (engine.ctx?.sampleRate || 48000))}s`;
   $("#orbit").setAttribute(
     "aria-label",
-    `Gemeinsame Phase: Takt ${orbit.bar + 1} von 8, Akkord ${orbit.chord + 1}, Beat ${orbit.beat}${waiting.length ? `, ${waiting.length} vorgemerkte Wechsel an Takt ${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}. Anzeige, kein Seek.`,
+    `Gemeinsame Phase: Takt ${orbit.bar + 1} von 8, Akkord ${chordName(harmony, orbit.bar * 16)} aus der Bass-Spur (${SONGS[harmony].name}), Beat ${orbit.beat}${waiting.length ? `, ${waiting.length} vorgemerkte Wechsel an Takt ${Math.floor((waiting[0].at % 128) / 16) + 1}` : ""}. Anzeige, kein Seek.`,
   );
-  $("#pack").value = session.pack;
-  $("#pack-meta").textContent = `${p.bpm} BPM · ${p.key}`;
   $("#play").textContent = engine.running ? "Ⅱ PAUSE" : "▶ PLAY";
   $("#transport-state").textContent = engine.running
     ? "● LIVE"
@@ -162,20 +191,74 @@ function refresh() {
   $("#record span").textContent = engine.recording ? "■ WAV" : "REC";
   session.tracks.forEach((t, i) => {
     const pending = engine.clock.pending.get(i),
-      active = engine.running || engine.paused ? pos.variants[i] : t.variant;
-    const gesture = ribbonGestures.get(i);
+      live = engine.running || engine.paused ? pos.choices[i] : t,
+      active = live.variant,
+      activeSong = live.song,
+      selected = engine.clock.selection(i);
+    const gesture = ribbonGestures.get(i),
+      swipe = swipeGestures.get(i);
     const mixAudible = audible(session.tracks, i);
     const silenceReason = t.mute ? "mute" : mixAudible ? "" : "solo";
     const silenceLabel = t.mute ? "Stumm" : "Solo-aus";
     const silenceDescription = t.mute
       ? "stummgeschaltet"
       : "durch Solo ausgeschlossen";
-    $("#name-" + i).textContent = namesFor(session.pack, i)[active];
-    $("#name-" + i).setAttribute(
-      "aria-label",
-      `${TRACKS[i]}: aktives Pattern ${active + 1}, ${namesFor(session.pack, i)[active]}${mixAudible ? "" : `, ${silenceDescription}`}`,
+    const bar = (q) => Math.floor((q.at % 128) / 16) + 1;
+    const songPending = pending && pending.song !== activeSong;
+    const previewSong =
+      swipe && !swipe.cancel && swipe.steps
+        ? wrapSong(selected.song + swipe.steps)
+        : null;
+    const card = $("#track-" + i),
+      shownSong = previewSong ?? activeSong;
+    card.style.setProperty("--song", SONGS[shownSong].color);
+    card.style.setProperty(
+      "--song-next",
+      SONGS[songPending ? pending.song : shownSong].color,
     );
-    $("#name-" + i).title = namesFor(session.pack, i)[active];
+    card.dataset.song = String(activeSong);
+    card.dataset.previewSong = previewSong === null ? "" : String(previewSong);
+    card.dataset.pendingSong = songPending ? String(pending.song) : "";
+    card.classList.toggle("theme-lead", theme.track === i);
+    const cell = $(`[data-swipe="${i}"]`);
+    cell.classList.toggle("previewing", previewSong !== null);
+    cell.classList.toggle("canceling", !!swipe?.cancel);
+    cell.classList.toggle("queued", !!songPending && !swipe);
+    cell.dataset.gesture = swipe
+      ? swipe.cancel
+        ? "cancel"
+        : swipe.steps
+          ? "choose"
+          : "armed"
+      : "idle";
+    $("#name-" + i).textContent = swipe?.cancel
+      ? "Abbrechen"
+      : previewSong !== null
+        ? SONGS[previewSong].name
+        : songPending
+          ? SONGS[pending.song].name
+          : SONGS[activeSong].name;
+    $("#song-cue-" + i).textContent = swipe
+      ? swipe.cancel
+        ? "verwirft"
+        : previewSong !== null
+          ? "→ los ✓"
+          : "‹ wischen ›"
+      : songPending
+        ? `→ ab T${bar(pending)}`
+        : !mixAudible
+          ? silenceLabel
+          : engine.running
+            ? "Spielt"
+            : engine.paused
+              ? "Pause"
+              : "Auswahl";
+    cell.setAttribute("aria-valuenow", String(selected.song + 1));
+    cell.setAttribute(
+      "aria-valuetext",
+      `${SONGS[activeSong].name}, Song ${activeSong + 1} von ${SONGS.length}${songPending ? `; ${SONGS[pending.song].name} ab Takt ${bar(pending)} vorgemerkt` : ""}${mixAudible ? "" : `, ${silenceDescription}`}`,
+    );
+    cell.title = SONGS[activeSong].name;
     const band = $(`[data-ribbon="${i}"]`);
     band.classList.toggle("canceling", !!gesture?.cancel);
     band.dataset.gesture = gesture
@@ -183,70 +266,63 @@ function refresh() {
         ? "cancel"
         : "choose"
       : "idle";
-    const card = $("#track-" + i);
+    band.style.setProperty("--fill", `${(active / 3) * 100}%`);
+    band.setAttribute("aria-valuenow", String(selected.variant + 1));
+    band.setAttribute(
+      "aria-valuetext",
+      `Stufe ${active + 1}, ${PATTERN_NAMES[i][active]}${pending && pending.variant !== active ? `; Stufe ${pending.variant + 1} ${PATTERN_NAMES[i][pending.variant]} ab Takt ${bar(pending)}` : ""}${mixAudible ? "" : `, ${silenceDescription}`}`,
+    );
     card.classList.toggle("muted", t.mute);
     card.classList.toggle("inaudible", !mixAudible);
     card.dataset.mixAudible = String(mixAudible);
     card.dataset.silenceReason = silenceReason;
     card.setAttribute(
       "aria-label",
-      `${TRACKS[i]}: ${mixAudible ? "im Mix freigegeben" : silenceDescription}`,
+      `${TRACKS[i]}: ${SONGS[activeSong].name}, ${mixAudible ? "im Mix freigegeben" : silenceDescription}`,
     );
-    $("#track-" + i).classList.toggle("soloed", t.solo);
+    card.classList.toggle("soloed", t.solo);
     $(`[data-mute="${i}"]`).setAttribute("aria-pressed", String(t.mute));
     $(`[data-solo="${i}"]`).setAttribute("aria-pressed", String(t.solo));
     $("#pending-" + i).textContent = pending
-      ? `${pending.variant + 1} ab Takt ${Math.floor((pending.at % 128) / 16) + 1}`
+      ? `${TRACKS[i]}: ${SONGS[pending.song].name} Stufe ${pending.variant + 1} ab Takt ${bar(pending)}`
       : "";
-    document.querySelectorAll(`[data-track="${i}"]`).forEach((el) => {
+    band.querySelectorAll("[data-variant]").forEach((el) => {
       const v = Number(el.dataset.variant);
-      const name = namesFor(session.pack, i)[v];
-      el.title = name;
-      el.setAttribute(
-        "aria-label",
-        `${TRACKS[i]}: ${name}, Pattern ${v + 1}${pending?.variant === v ? `, ab Takt ${Math.floor((pending.at % 128) / 16) + 1}` : ""}${v === active && !mixAudible ? `, ${silenceDescription}` : ""}`,
-      );
       el.classList.toggle("active", v === active);
-      el.classList.toggle("queued", pending?.variant === v);
-      el.setAttribute("aria-pressed", String(v === active));
-      const preview = !gesture?.cancel && gesture?.variant === v;
-      el.classList.toggle("scrub-preview", preview);
-      el.querySelector(".pattern-cue").textContent = preview
-        ? "Wahl"
-        : pending?.variant === v
-          ? `ab T${Math.floor((pending.at % 128) / 16) + 1}`
-          : v === active
-            ? !mixAudible
-              ? silenceLabel
-              : engine.running
-                ? "Spielt"
-                : engine.paused
-                  ? "Pause"
-                  : "Auswahl"
-            : "";
-      el.style.setProperty(
-        "--step-progress",
-        `${(reducedMotion.matches ? Math.floor(orbit.stepProgress * 4) / 4 : orbit.stepProgress) * 100}%`,
+      el.classList.toggle(
+        "queued",
+        !!pending && pending.variant === v && v !== active,
+      );
+      el.classList.toggle(
+        "scrub-preview",
+        !gesture?.cancel && gesture?.variant === v,
       );
     });
   });
-  const gestures = [...ribbonGestures.entries()];
-  if (gestures.length) {
+  const gestures = [...ribbonGestures.entries()],
+    swipes = [...swipeGestures.entries()];
+  if (swipes.length) {
+    const [track, g] = swipes.at(-1);
+    $("#interaction-status").textContent = g.cancel
+      ? `${TRACKS[track]}: Abbrechen – loslassen`
+      : g.steps
+        ? `${TRACKS[track]}: ${SONGS[wrapSong(engine.clock.selection(track).song + g.steps)].name} – loslassen`
+        : `${TRACKS[track]}: wischen ‹ ›`;
+  } else if (gestures.length) {
     const [track, g] = gestures.find(([, g]) => g.cancel) || gestures[0];
     $("#interaction-status").textContent =
       gestures.length > 1
         ? `${gestures.length} Auswahlen · ${gestures.filter(([, g]) => g.cancel).length} Abbruch`
         : g.cancel
           ? `${TRACKS[track]}: Abbrechen – loslassen`
-          : `${TRACKS[track]}: ${g.variant + 1} wählen – loslassen`;
+          : `${TRACKS[track]}: Stufe ${g.variant + 1} – loslassen`;
   } else if (engine.clock.pending.size) {
     const [track, q] = [...engine.clock.pending][0];
     $("#interaction-status").textContent =
       engine.clock.pending.size === 1
-        ? `${TRACKS[track]}: ${q.variant + 1} ab Takt ${Math.floor((q.at % 128) / 16) + 1}`
+        ? `${TRACKS[track]}: ${SONGS[q.song].name} ${q.variant + 1} ab Takt ${Math.floor((q.at % 128) / 16) + 1}`
         : `${engine.clock.pending.size} Wechsel ab Takt ${Math.floor((q.at % 128) / 16) + 1}`;
-  } else
-    $("#interaction-status").textContent = "Pattern ziehen · Hits streichen";
+  } else $("#interaction-status").textContent = "Song wischen · Hits streichen";
   document
     .querySelectorAll("[data-fx]")
     .forEach((el) =>
@@ -359,8 +435,6 @@ app.addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.special && e.detail === 0) triggerPad(b.dataset.special);
-  if (b.dataset.track !== undefined && e.detail === 0)
-    engine.queue(Number(b.dataset.track), Number(b.dataset.variant));
   for (const key of ["mute", "solo"])
     if (b.dataset[key] !== undefined) {
       const i = Number(b.dataset[key]);
@@ -408,7 +482,7 @@ for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
     const g = ribbonGestures.get(track);
     if (g?.pointerId !== e.pointerId) return;
     ribbonGestures.delete(track);
-    if (commit && !g.cancel) engine.queue(track, g.variant);
+    if (commit && !g.cancel) engine.queue(track, { variant: g.variant });
     if (ribbon.hasPointerCapture(e.pointerId))
       ribbon.releasePointerCapture(e.pointerId);
     refresh();
@@ -420,26 +494,93 @@ for (const ribbon of document.querySelectorAll("[data-ribbon]")) {
   ribbon.onpointercancel = (e) => finish(e, false);
   ribbon.onlostpointercapture = (e) => finish(e, false);
   ribbon.onkeydown = (e) => {
-    const active = Number(e.target.closest("[data-variant]")?.dataset.variant);
-    if (!Number.isFinite(active)) return;
+    const current = engine.clock.selection(track).variant;
     const next = {
-      ArrowLeft: Math.max(0, active - 1),
-      ArrowRight: Math.min(3, active + 1),
+      ArrowLeft: Math.max(0, current - 1),
+      ArrowDown: Math.max(0, current - 1),
+      ArrowRight: Math.min(3, current + 1),
+      ArrowUp: Math.min(3, current + 1),
       Home: 0,
       End: 3,
     }[e.key];
     if (next === undefined) return;
     e.preventDefault();
-    engine.queue(track, next);
-    ribbon.querySelector(`[data-variant="${next}"]`).focus();
+    engine.queue(track, { variant: next });
+  };
+}
+// Per-track song swipe: preview while moving, commit on release, cancel restores.
+for (const cell of document.querySelectorAll("[data-swipe]")) {
+  const track = Number(cell.dataset.swipe);
+  const preview = (e) => {
+    const g = swipeGestures.get(track);
+    if (g?.pointerId !== e.pointerId) return;
+    g.steps = swipeSteps(e.clientX - g.x);
+    g.cancel = ribbonCancelled(e.clientY, cell.getBoundingClientRect());
+    refresh();
+  };
+  cell.onpointerdown = (e) => {
+    if (e.button !== 0 || swipeGestures.has(track)) return;
+    e.preventDefault();
+    swipeGestures.set(track, {
+      pointerId: e.pointerId,
+      x: e.clientX,
+      steps: 0,
+      cancel: false,
+    });
+    cell.setPointerCapture(e.pointerId);
+    refresh();
+  };
+  cell.onpointermove = preview;
+  const finish = (e, commit) => {
+    const g = swipeGestures.get(track);
+    if (g?.pointerId !== e.pointerId) return;
+    swipeGestures.delete(track);
+    if (commit && !g.cancel && g.steps) {
+      engine.queue(track, {
+        song: wrapSong(engine.clock.selection(track).song + g.steps),
+      });
+      session.themeTrack = track;
+    }
+    if (cell.hasPointerCapture(e.pointerId))
+      cell.releasePointerCapture(e.pointerId);
+    refresh();
+  };
+  cell.onpointerup = (e) => {
+    preview(e);
+    finish(e, true);
+  };
+  cell.onpointercancel = (e) => finish(e, false);
+  cell.onlostpointercapture = (e) => finish(e, false);
+  cell.onkeydown = (e) => {
+    const current = engine.clock.selection(track).song;
+    const next = {
+      ArrowLeft: wrapSong(current - 1),
+      ArrowDown: wrapSong(current - 1),
+      ArrowRight: wrapSong(current + 1),
+      ArrowUp: wrapSong(current + 1),
+      Home: 0,
+      End: SONGS.length - 1,
+    }[e.key];
+    if (next === undefined) return;
+    e.preventDefault();
+    engine.queue(track, { song: next });
+    session.themeTrack = track;
+    refresh();
   };
 }
 document.addEventListener(
   "keydown",
   (e) => {
-    if (e.key !== "Escape" || !ribbonGestures.size) return;
+    if (e.key !== "Escape" || (!ribbonGestures.size && !swipeGestures.size))
+      return;
     e.preventDefault();
     e.stopPropagation();
+    for (const [track, g] of [...swipeGestures]) {
+      swipeGestures.delete(track);
+      const cell = $(`[data-swipe="${track}"]`);
+      if (cell.hasPointerCapture(g.pointerId))
+        cell.releasePointerCapture(g.pointerId);
+    }
     for (const [track, g] of [...ribbonGestures]) {
       ribbonGestures.delete(track);
       const band = $(`[data-ribbon="${track}"]`);
@@ -555,7 +696,7 @@ function connectRecording() {
     );
     const a = $("#download");
     a.href = downloadUrl;
-    a.download = `BoomStep-${PACKS[session.pack].name.replaceAll(" ", "-")}.wav`;
+    a.download = `BoomStep-${SONGS[session.tracks[1].song].name}.wav`;
     a.hidden = false;
     a.textContent = `↓ Stereo-WAV (${(buffer.byteLength / 1048576).toFixed(1)} MB)`;
     notice(
@@ -592,6 +733,7 @@ async function restore(value) {
   if (engine.recording) throw new Error("Bitte zuerst Aufnahme beenden.");
   const next = validateSession(value);
   ribbonGestures.clear();
+  swipeGestures.clear();
   glidePointers.clear();
   padFlashes.clear();
   await engine.dispose();
@@ -601,8 +743,8 @@ async function restore(value) {
   syncSliders();
   refresh();
   notice(
-    value.version === 1
-      ? "Alte Session als Classic-Paket geladen."
+    value.version < 4
+      ? `Alte Session übernommen: Mix und Patternstufen bleiben, alte Klänge gibt es nicht mehr – Song ${SONGS[next.tracks[0].song].name}.`
       : "Session geladen. PLAY startet.",
   );
 }
@@ -632,28 +774,17 @@ $("#import-session").onchange = (e) =>
       await restore(JSON.parse(await e.target.files[0].text()));
     e.target.value = "";
   });
-$("#pack").onchange = (e) =>
-  guarded(async () => {
-    if (engine.recording) {
-      e.target.value = session.pack;
-      throw new Error("Erst REC beenden, dann Paket wechseln.");
-    }
-    const next = initialSession();
-    next.beatLights = session.beatLights;
-    next.pack = Number(e.target.value);
-    if (next.pack === 1) next.tracks[0].variant = 2;
-    if (next.pack === 2) {
-      next.tracks[0].variant = 1;
-      next.tracks[1].variant = 3;
-      next.tracks[2].variant = 1;
-      next.tracks[3].variant = 3;
-    }
-    if (next.pack >= 3 && next.pack <= 5) {
-      next.drive = 0;
-      next.pump = 0;
-    }
-    await restore(next);
-  });
+$("#all-songs").onchange = (e) => {
+  const value = e.target.value;
+  e.target.value = "";
+  if (value === "") return;
+  for (let i = 0; i < 4; i++) engine.queue(i, { song: Number(value) });
+  session.themeTrack = 0;
+  notice(
+    `${SONGS[value].name} für alle Spuren${engine.running ? " ab nächstem Takt" : ""}; Patternstufen und Mix bleiben.`,
+  );
+  refresh();
+};
 $("#help").onclick = () => {
   const open = $("#help-text").hidden;
   $("#help-text").hidden = !open;
@@ -663,6 +794,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     activePointer = null;
     ribbonGestures.clear();
+    swipeGestures.clear();
     glidePointers.clear();
     session.fx.hold = false;
     release();
@@ -693,6 +825,7 @@ window.boomstep = {
   get session() {
     return session;
   },
+  songs: SONGS,
   renderDiagnostic,
   async renderDiagnosticWav(config) {
     const buffer = await renderDiagnostic(config);

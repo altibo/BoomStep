@@ -1,5 +1,5 @@
 {
-  "name": "BoomStep · Krassheit",
+  "name": "BoomStep · Dark Bounce",
   "short_name": "BoomStep",
   "lang": "de",
   "start_url": "./",
@@ -7,7 +7,7 @@
   "display": "standalone",
   "background_color": "#06101d",
   "theme_color": "#061322",
-  "description": "Krassheit live spielen: dichterer Sound, Farbglow im Beat, Patternbänder und sechs Specials. Eigene Offline-Synthese.",
+  "description": "Zehn dunkle Bouncy-Techno-Songs pro Spur wischen, Pattern-Regler, Songfarben, Krassheit und sechs Specials. CC0-Samples, offline spielbar.",
   "icons": [
     {
       "src": "icon-192.png",

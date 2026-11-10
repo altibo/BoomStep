@@ -1,3 +1,4 @@
+import { SONGS, degreeMidi, chordDegree, fold, riffRange } from "./songs.js";
 // Additive performance macro. Zero is exactly the existing user mix/pattern baseline.
 export const intensityUnit = (n) =>
   Math.max(0, Math.min(1, Number.isFinite(n) ? n : 0));
@@ -12,7 +13,7 @@ export function intensityTargets(session) {
 }
 export const intensityName = (a) =>
   a < 0.25 ? "Locker" : a < 0.75 ? "Druck" : "Abriss";
-export function intensityEvents(base, track, step, amount, pack) {
+export function intensityEvents(base, track, step, amount, choices) {
   const a = intensityUnit(amount),
     s = step % 16,
     phrase = Math.floor(step / 16) % 8;
@@ -20,22 +21,37 @@ export function intensityEvents(base, track, step, amount, pack) {
   const out = base.map((e) => ({ ...e, energy: a }));
   if (track === 0) {
     if (a >= 0.25 && s % 4 === 1 && !out.some((e) => e.kind === "hat"))
-      out.push({ kind: "hat", velocity: 0.05 + 0.08 * a, energy: a });
+      out.push({
+        kind: "hat",
+        sample: "hat",
+        velocity: 0.08 + 0.1 * a,
+        energy: a,
+      });
     if (a >= 0.5 && s % 4 === 3)
       out.push({
-        kind: "rim",
-        note: 76,
-        velocity: 0.08 + 0.12 * a,
-        length: 0.5,
+        kind: "perc",
+        sample: "rim",
+        velocity: 0.1 + 0.14 * a,
         energy: a,
       });
     if (a >= 0.75 && phrase === 7 && s >= 12)
-      out.push({ kind: "snare", velocity: 0.14, offset: 0.5, energy: a });
+      out.push({
+        kind: "snare",
+        sample: "snare",
+        velocity: 0.18,
+        offset: 0.5,
+        energy: a,
+      });
   }
   if (track === 3 && a >= 0.55 && s % 8 === 6)
     out.push({
-      kind: pack.character === "bounce" ? "bouncestab" : "rave",
-      note: pack.roots[Math.floor(step / 16) % 4] + 24,
+      kind: "tone",
+      inst: SONGS[choices[3].song].riff.inst,
+      note: fold(
+        degreeMidi(chordDegree(choices[1].song, step) + 7, 53),
+        ...riffRange(SONGS[choices[3].song].riff.inst),
+      ),
+      cutoff: SONGS[choices[3].song].riff.cut,
       length: 0.45,
       velocity: 0.08 + 0.08 * a,
       offset: 0.5,
@@ -43,6 +59,9 @@ export function intensityEvents(base, track, step, amount, pack) {
     });
   return out;
 }
+export const hexRgb = (hex) =>
+  [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+// Song colour sets the hue; Krassheit lifts it slightly toward white and adds glow.
 export function lightState(
   amount,
   progress,
@@ -50,12 +69,11 @@ export function lightState(
   running,
   beatLights,
   reduced,
+  base = "#ff5fd7",
 ) {
   const a = intensityUnit(amount),
-    left = a <= 0.5 ? [57, 215, 237] : [174, 166, 255],
-    right = a <= 0.5 ? [174, 166, 255] : [255, 133, 218],
-    t = a <= 0.5 ? a * 2 : (a - 0.5) * 2;
-  const rgb = left.map((v, i) => Math.round(v + (right[i] - v) * t));
+    lift = Math.round(a * 22),
+    rgb = hexRgb(base).map((v) => Math.round(v + (255 - v) * (lift / 100)));
   const beatsPerPulse = Math.max(1, Math.ceil(bpm / 60 / 3));
   const pulse =
     running && beatLights && !reduced
@@ -66,6 +84,7 @@ export function lightState(
   return {
     rgb: rgb.join(","),
     accent: `rgb(${rgb.join(",")})`,
+    lift: `${lift}%`,
     pulse,
     glow: 0.1 + a * 0.24 + pulse * a * 0.14,
     hz: bpm / 60 / beatsPerPulse,

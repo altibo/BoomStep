@@ -10,7 +10,11 @@ test("standalone pads unlock audio without starting the jam, retrigger every tap
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await page.goto("/");
-  await expect(page.locator("#pack")).toHaveValue("6");
+  expect(
+    await page.evaluate(() =>
+      window.boomstep.session.tracks.map((t) => t.song),
+    ),
+  ).toEqual([0, 0, 0, 0]);
   expect(await page.locator(".special-pad").count()).toBe(6);
   await page.locator('[data-special="bark"]').click();
   await expect(page.locator('[data-special="bark"]')).toHaveClass(/firing/);
@@ -129,7 +133,7 @@ test("six distinct finite waveforms and overlapped specials have bounded nonempt
         id,
         ...metrics(
           await render({
-            pack: 6,
+            song: 6,
             onlySpecials: true,
             specials: [{ id, time: 0.1 }],
             seconds: 2.5,
@@ -137,7 +141,7 @@ test("six distinct finite waveforms and overlapped specials have bounded nonempt
         ),
       });
     const all = await render({
-      pack: 6,
+      song: 6,
       onlySpecials: true,
       specials: ["bark", "bass", "fill", "rise", "impact", "laser"].flatMap(
         (id) => [
@@ -148,13 +152,13 @@ test("six distinct finite waveforms and overlapped specials have bounded nonempt
       seconds: 2.5,
     });
     const dry = await render({
-        pack: 6,
+        song: 6,
         onlySpecials: true,
         specials: [{ id: "bass", time: 0.1 }],
         seconds: 2.5,
       }),
       wet = await render({
-        pack: 6,
+        song: 6,
         onlySpecials: true,
         specials: [{ id: "bass", time: 0.1 }],
         mode: "drive",
@@ -285,7 +289,8 @@ test("readable specials and controls fit 390x844; smaller viewports scroll hones
     else expect(b.y + b.height).toBeGreaterThan(height);
     for (const selector of [
       ".special-pad",
-      ".pattern",
+      ".variant-slider",
+      ".song-swipe",
       ".mute",
       ".solo",
       ".transport button",
@@ -324,7 +329,7 @@ test("35-second representative original jam with specials exports valid bounded 
           time: 1.4 + i * 1.8,
         }));
       const data = await window.boomstep.renderDiagnosticWav({
-        pack: 6,
+        song: 6,
         seconds: 35,
         specials,
         reverb: 0.14,

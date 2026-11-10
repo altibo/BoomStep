@@ -1,37 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import {
-  initialSession,
-  validateSession,
-  PACKS,
-  eventsAt,
-  namesFor,
-} from "../src/music.js";
+import { initialSession, validateSession } from "../src/music.js";
+import { chordDegree, degreeMidi } from "../src/songs.js";
 import {
   SPECIALS,
   specialPlan,
   oldestSpecial,
   MAX_SPECIAL_GROUPS,
 } from "../src/specials.js";
-test("Berlin Bounce is an original new default, preserves old pack indices and all pitched events share F minor", () => {
-  const s = initialSession();
-  assert.equal(s.version, 3);
-  assert.equal(s.pack, 6);
-  assert.equal(PACKS[6].bpm, 152);
-  assert.equal(PACKS[0].name, "Donk District");
-  assert.equal(PACKS[3].name, "Classic · Night Drive");
-  assert.equal(namesFor(6, 0)[0], "Bounce");
-  const scale = new Set([0, 1, 3, 5, 7, 8, 10]);
-  for (let t = 1; t < 4; t++)
-    for (let v = 0; v < 4; v++)
-      for (let step = 0; step < 128; step++)
-        for (const e of eventsAt(6, t, v, step))
-          assert.ok(scale.has(e.note % 12));
-  assert.notDeepEqual(eventsAt(0, 1, 0, 2), eventsAt(6, 1, 0, 2));
-});
 test("all six one-shots have distinct, finite event plans and current-chord tuning", () => {
   assert.equal(SPECIALS.length, 6);
   const plans = SPECIALS.map((p) => specialPlan(p.id, 6, 34));
+  const chord = chordDegree(6, 34);
   assert.equal(new Set(plans.map((p) => JSON.stringify(p))).size, 6);
   for (const plan of plans)
     for (const p of plan) {
@@ -39,8 +19,9 @@ test("all six one-shots have distinct, finite event plans and current-chord tuni
       assert.ok(p.event.seconds > 0 && p.event.seconds <= 1.2);
       assert.ok(p.event.velocity > 0 && p.event.velocity <= 1);
     }
-  assert.equal(plans[0][0].event.note, PACKS[6].roots[2] + 12);
-  assert.equal(plans[1][0].event.note, PACKS[6].roots[2] - 12);
+  assert.equal(plans[0][0].event.note, degreeMidi(chord, 53));
+  assert.equal(plans[1][0].event.note, degreeMidi(chord, 29));
+  assert.ok(plans.flat().every((p) => p.event.kind !== "tone" || p.event.inst));
   assert.notEqual(
     specialPlan("bass", 6, 0)[0].event.note,
     specialPlan("bass", 6, 34)[0].event.note,
@@ -54,21 +35,27 @@ test("voice limit steals the oldest rather than dropping retriggers", () => {
   assert.equal(oldestSpecial(groups), groups[0]);
   assert.equal(oldestSpecial(groups.slice(1)), undefined);
 });
-test("v2 migration preserves every previous pack and FX/mix state, initializes only special level", () => {
-  for (let pack = 0; pack < 6; pack++) {
-    const old = initialSession(pack);
-    old.version = 2;
-    delete old.specialLevel;
-    old.fx.hold = true;
-    old.fx.depth = 0.6;
-    old.tracks[1].variant = 3;
-    const s = validateSession(old);
-    assert.equal(s.version, 3);
-    assert.equal(s.pack, pack);
-    assert.equal(s.specialLevel, 0.7);
-    assert.deepEqual(s.fx, old.fx);
-    assert.deepEqual(s.tracks, old.tracks);
-  }
+test("special level validates strictly and V2-era sessions gain the default level", () => {
+  const old = {
+    version: 2,
+    pack: 4,
+    master: 1,
+    reverb: 0.1,
+    drive: 0.2,
+    pump: 0.3,
+    fx: { mode: "echo", x: 0.5, depth: 0.6, hold: true, division: 8 },
+    tracks: [0, 1, 2, 3].map((v) => ({
+      variant: v,
+      mute: false,
+      solo: false,
+      volume: 0.5,
+      filter: 1,
+      delay: 0,
+    })),
+  };
+  const s = validateSession(old);
+  assert.equal(s.specialLevel, 0.7);
+  assert.deepEqual(s.fx, old.fx);
   for (const level of [-1, 2, NaN, "0.5"])
     assert.throws(() =>
       validateSession({ ...initialSession(), specialLevel: level }),

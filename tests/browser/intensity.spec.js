@@ -29,7 +29,7 @@ test("large macro stays direct and readable at 0/50/100 without adding viewport 
         ),
         targets: [
           ...document.querySelectorAll(
-            ".pattern,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#pack,#intensity,#light-mode",
+            ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs,#intensity,#light-mode",
           ),
         ].map((e) => {
           const b = e.getBoundingClientRect();
@@ -45,8 +45,8 @@ test("large macro stays direct and readable at 0/50/100 without adding viewport 
       }));
       expect(m.overflow).toBe(false);
       expect(m.clipped).toBe(false);
-      expect(m.targets).toHaveLength(61);
-      expect(m.bottom).toBe(width === 390 ? 822 : 936);
+      expect(m.targets).toHaveLength(53);
+      expect(m.bottom).toBe(width === 390 ? 822 : 872);
       for (const b of m.targets) {
         expect(b.w).toBeGreaterThanOrEqual(44);
         expect(b.h).toBeGreaterThanOrEqual(44);
@@ -227,7 +227,7 @@ test("0/50/100 alter spectral/wave shape beyond gain; max plus six specials is b
     const metrics = [];
     for (const intensity of [0, 0.5, 1]) {
       const b = await window.boomstep.renderDiagnostic({
-        pack: 6,
+        song: 6,
         intensity,
         seconds: 2.6,
       });
@@ -254,7 +254,7 @@ test("0/50/100 alter spectral/wave shape beyond gain; max plus six specials is b
       return Math.sqrt(e / yy);
     };
     const stress = await window.boomstep.renderDiagnostic({
-      pack: 6,
+      song: 6,
       intensity: 1,
       mode: "drive",
       depth: 1,
@@ -285,7 +285,7 @@ test("0/50/100 alter spectral/wave shape beyond gain; max plus six specials is b
     Array.from(
       new Uint8Array(
         await window.boomstep.renderDiagnosticWav({
-          pack: 6,
+          song: 6,
           seconds: 24,
           intensitySweep: [
             { time: 0, value: 0 },

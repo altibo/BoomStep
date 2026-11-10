@@ -60,7 +60,7 @@ test("ribbon keyboard is discrete and accessible; lost capture discards a previe
   page,
 }) => {
   await page.goto("/");
-  await page.locator('[data-track="0"][data-variant="0"]').focus();
+  await page.locator('[data-ribbon="0"]').focus();
   await page.keyboard.press("ArrowRight");
   expect(
     await page.evaluate(() => window.boomstep.session.tracks[0].variant),
@@ -263,7 +263,7 @@ test("orbit deck layout preserves all direct controls, primary targets and no ov
     else expect(box.y + box.height).toBeGreaterThan(height);
     const bad = await page
       .locator(
-        ".pattern,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",
+        ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy",
       )
       .evaluateAll((es) =>
         es
@@ -303,7 +303,7 @@ test("reduced motion shows true bar changes without a continuously moving head",
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/");
-  await expect(page.locator(".pattern.active .pattern-cue")).toHaveText([
+  await expect(page.locator(".song-cue")).toHaveText([
     "Auswahl",
     "Auswahl",
     "Auswahl",

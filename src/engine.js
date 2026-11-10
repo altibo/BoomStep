@@ -2,12 +2,15 @@ import { intensityTargets, intensityEvents } from "./intensity.js";
 import { specialPlan, oldestSpecial } from "./specials.js";
 import {
   PatternClock,
-  PACKS,
+  BPM,
+  STEP_SECONDS,
   eventsAt,
+  harmonyOf,
   cutoff,
   audible,
   initialSession,
 } from "./music.js";
+import { loadBank } from "./samples.js";
 import {
   fxTargets,
   driveCurve,
@@ -72,7 +75,7 @@ export class Engine {
     this.lfoGain.connect(this.flange.delayTime);
     this.lfo.start();
     this.echo = c.createDelay(1);
-    this.echo.delayTime.value = (60 / PACKS[this.session.pack].bpm) * 0.75;
+    this.echo.delayTime.value = (60 / BPM) * 0.75;
     this.echoFeedback = c.createGain();
     this.echoFeedback.gain.value = 0.42;
     this.echoWet = c.createGain();
@@ -129,7 +132,7 @@ export class Engine {
       send.gain.value = 1;
       returnGain.gain.value = 0;
       pan.pan.value = [0, 0, -0.16, 0.16][i];
-      delay.delayTime.value = (60 / PACKS[this.session.pack].bpm) * 0.75;
+      delay.delayTime.value = (60 / BPM) * 0.75;
       feedback.gain.value = 0.3;
       filter.connect(gain);
       gain.connect(duck);
@@ -157,6 +160,7 @@ export class Engine {
     const c = new C({ latencyHint: "interactive" });
     void c.resume();
     this.createGraph(c);
+    this.library = await loadBank(c);
     try {
       await c.audioWorklet.addModule(`${import.meta.env.BASE_URL}recorder.js`);
       this.capture = new AudioWorkletNode(c, "capture", {
@@ -212,10 +216,10 @@ export class Engine {
         time: p.time + shift,
       }));
       this.nextTime = this.pauseAnchor.nextTime + shift;
-      const dt = 60 / PACKS[this.session.pack].bpm / 4;
+      const dt = STEP_SECONDS;
       for (const p of this.timeline)
         if (p.time > this.ctx.currentTime)
-          this.scheduleStep(p.step, p.time, dt, p.variants);
+          this.scheduleStep(p.step, p.time, dt, p.choices);
       this.pausedWithSpecials = false;
     }
     this.loopBus.gain.setTargetAtTime(1, this.ctx.currentTime, 0.008);
@@ -270,17 +274,17 @@ export class Engine {
   }
   pump() {
     const c = this.ctx,
-      dt = 60 / PACKS[this.session.pack].bpm / 4;
+      dt = STEP_SECONDS;
     if (this.nextTime < c.currentTime - 0.15) {
       const skipped = Math.ceil((c.currentTime - this.nextTime) / dt);
       for (let i = 0; i < skipped; i++) this.clock.tick();
       this.nextTime += skipped * dt;
     }
     while (this.nextTime < c.currentTime + 0.1) {
-      const { step, variants } = this.clock.tick();
+      const { step, choices } = this.clock.tick();
       const time = this.nextTime;
-      this.timeline.push({ step, time, variants });
-      this.scheduleStep(step, time, dt, variants);
+      this.timeline.push({ step, time, choices });
+      this.scheduleStep(step, time, dt, choices);
       this.nextTime += dt;
     }
     this.timeline = this.timeline.filter((x) => x.time > c.currentTime - 1);
@@ -290,19 +294,22 @@ export class Engine {
     step,
     time,
     dt,
-    variants = this.session.tracks.map((t) => t.variant),
+    choices = this.session.tracks.map((t) => ({
+      song: t.song,
+      variant: t.variant,
+    })),
   ) {
     const all = Array.from({ length: 4 }, (_, i) =>
       intensityEvents(
-        eventsAt(this.session.pack, i, variants[i], step),
+        eventsAt(choices, i, step),
         i,
         step,
         this.session.intensity,
-        PACKS[this.session.pack],
+        choices,
       ),
     );
     if (
-      all[0].some((e) => e.kind === "kick" || e.kind === "bouncekick") &&
+      all[0].some((e) => e.kind === "kick") &&
       audible(this.session.tracks, 0) &&
       this.session.tracks[0].volume > 0.001
     )
@@ -334,17 +341,22 @@ export class Engine {
   }
   position() {
     if (this.paused && this.frozenPosition) return this.frozenPosition;
-    if (!this.ctx)
-      return { step: 0, variants: this.session.tracks.map((t) => t.variant) };
+    if (!this.ctx) return { step: 0, choices: this.choices() };
     return (
       this.timeline.filter((x) => x.time <= this.ctx.currentTime).at(-1) || {
         step: Math.max(0, this.clock.step - 1),
-        variants: this.session.tracks.map((t) => t.variant),
+        choices: this.choices(),
       }
     );
   }
-  queue(i, v) {
-    this.clock.queue(i, v, this.running || this.paused);
+  choices() {
+    return this.session.tracks.map((t) => ({
+      song: t.song,
+      variant: t.variant,
+    }));
+  }
+  queue(i, change) {
+    this.clock.queue(i, change, this.running || this.paused);
     this.onUpdate();
   }
   applyMix(at) {
@@ -376,7 +388,7 @@ export class Engine {
     this.gate.gain.cancelScheduledValues(now);
     ramp(this.gate.gain, 1, 0.015);
     // Re-plan only already queued audio-time gate edges after a live gesture.
-    const dt = 60 / PACKS[this.session.pack].bpm / 4;
+    const dt = STEP_SECONDS;
     for (const p of this.timeline)
       if (p.time >= now) this.scheduleGate(p.step, p.time, dt);
   }
@@ -387,7 +399,7 @@ export class Engine {
       time,
       dt,
       dest,
-      PACKS[this.session.pack],
+      this.library,
       this.noise,
       (source) => {
         this.sources.add(source);
@@ -434,7 +446,7 @@ export class Engine {
     this.specialGroups = this.specialGroups.filter((g) => g !== group);
   }
   scheduleSpecial(id, when, step = this.position().step, limit = true) {
-    const plan = specialPlan(id, this.session.pack, step),
+    const plan = specialPlan(id, harmonyOf(this.position().choices), step),
       old = limit ? oldestSpecial(this.specialGroups) : undefined;
     if (old) this.releaseSpecial(old);
     const gain = this.ctx.createGain();
@@ -443,7 +455,7 @@ export class Engine {
     const group = { id, gain, sources: new Set() };
     this.specialGroups.push(group);
     this.specialTriggerCount++;
-    const dt = 60 / PACKS[this.session.pack].bpm / 4;
+    const dt = STEP_SECONDS;
     for (const item of plan)
       this.note(item.event, when + item.offset, dt, gain, group);
     this.onUpdate();
@@ -504,44 +516,45 @@ export class Engine {
     if (this.ctx) await this.ctx.close();
   }
 }
-// The same synth/FX graph, rendered without a speaker or worklet for deterministic signal tests.
+// The same sampler/FX graph, rendered without a speaker or worklet for deterministic signal tests.
+// `songs` sets each track's song; `switches` queues timed per-track song/variant changes.
 export async function renderDiagnostic({
-  pack = 0,
+  song = 0,
+  songs,
   track,
   variant = 0,
+  variants,
   mode = "echo",
   depth = 0,
   x = 0.5,
   seconds = 3.3,
-  pump = 0.7,
+  pump = 0.6,
   reverb = 0,
   bars,
   specials = [],
   onlySpecials = false,
   intensity = 0,
   intensitySweep = [],
+  switches = [],
 } = {}) {
   const c = new OfflineAudioContext(2, Math.ceil(seconds * 48000), 48000),
-    s = initialSession();
-  s.pack = pack;
+    s = initialSession(song);
   s.intensity = intensity;
   s.reverb = reverb;
   s.drive = 0.08;
   s.pump = pump;
   s.fx = { ...s.fx, mode, depth, x };
-  if (track !== undefined)
-    s.tracks.forEach((t, i) => {
-      t.mute = i !== track;
-      t.variant = variant;
-    });
-  else
-    s.tracks.forEach((t) => {
-      t.variant = variant;
-    });
+  s.tracks.forEach((t, i) => {
+    t.song = songs?.[i] ?? song;
+    t.variant = variants?.[i] ?? variant;
+    if (track !== undefined) t.mute = i !== track;
+  });
   const e = new Engine(s);
   e.createGraph(c);
+  e.library = await loadBank(c);
   e.ceiling.connect(c.destination);
-  const dt = 60 / PACKS[pack].bpm / 4;
+  const dt = STEP_SECONDS;
+  const pendingSwitches = [...switches].sort((a, b) => a.step - b.step);
   if (!onlySpecials)
     for (
       let step = 0;
@@ -549,6 +562,10 @@ export async function renderDiagnostic({
       (bars === undefined || step < bars * 16);
       step++
     ) {
+      while (pendingSwitches.length && pendingSwitches[0].step <= step) {
+        const sw = pendingSwitches.shift();
+        Object.assign(s.tracks[sw.track], sw.change);
+      }
       const when = 0.05 + step * dt;
       const next =
         intensitySweep.filter((p) => p.time <= when - 0.05 + 1e-8).at(-1)

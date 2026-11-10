@@ -1,11 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { initialSession as legacySession } from "../src/legacy-music.js";
 import {
   initialSession,
   validateSession,
-  eventsAt,
-  PACKS,
+  LEGACY_PACK_SONG,
 } from "../src/music.js";
 import {
   releaseFX,
@@ -17,21 +15,57 @@ import {
   driveCurve,
   ceilingCurve,
 } from "../src/fx.js";
-test("v1 sessions migrate every Classic pack without losing original settings", () => {
+// Fixtures in the exact shape the old builds stored (V1 Classic, V2 six packs, V3 seven packs).
+const oldTracks = () =>
+  [0.74, 0.7, 0.6, 0.62].map((volume, i) => ({
+    variant: i,
+    mute: i === 2,
+    solo: false,
+    volume,
+    filter: 0.9,
+    delay: i === 3 ? 0.2 : 0,
+  }));
+const v1 = (pack) => ({
+  version: 1,
+  pack,
+  master: 0.9,
+  reverb: 0.3,
+  tracks: oldTracks(),
+});
+test("V1/V2/V3 sessions migrate to V4: mix, patterns, mutes and FX kept; old pack maps to a documented new song", () => {
   for (let pack = 0; pack < 3; pack++) {
-    const old = legacySession();
-    old.pack = pack;
+    const old = v1(pack);
     old.tracks[1].volume = 0.23;
-    old.tracks[2].variant = 3;
     old.tracks[3].solo = true;
     const s = validateSession(old);
-    assert.equal(s.version, 3);
-    assert.equal(s.pack, pack + 3);
-    assert.deepEqual(s.tracks, old.tracks);
+    assert.equal(s.version, 4);
+    assert.equal(Object.hasOwn(s, "pack"), false);
+    assert.equal(s.themeTrack, 0);
+    assert.deepEqual(
+      s.tracks.map(({ song: _song, ...t }) => t),
+      old.tracks,
+    );
+    assert.ok(s.tracks.every((t) => t.song === LEGACY_PACK_SONG[pack + 3]));
     assert.equal(s.drive, 0);
     assert.equal(s.fx.depth, 0);
     assert.deepEqual(validateSession(JSON.parse(JSON.stringify(s))), s);
   }
+  for (let pack = 0; pack < 7; pack++) {
+    const old = {
+      ...initialSession(),
+      version: 3,
+      pack,
+      fx: { mode: "gate", x: 0.3, depth: 0.6, hold: true, division: 16 },
+      tracks: oldTracks(),
+    };
+    delete old.themeTrack;
+    const s = validateSession(old);
+    assert.equal(s.version, 4);
+    assert.deepEqual(s.fx, old.fx);
+    assert.ok(s.tracks.every((t) => t.song === LEGACY_PACK_SONG[pack]));
+  }
+  assert.equal(new Set(LEGACY_PACK_SONG).size, 7);
+  assert.throws(() => validateSession({ ...v1(0), pack: 5 }));
 });
 test("FX validation rejects unknown/unsafe states", () => {
   const s = initialSession();
@@ -81,25 +115,6 @@ test("filter, drive, echo, flanger and phase-locked 1/8 vs 1/16 gate have real d
   assert.equal(gateLevel(false, 0), 1);
   assert.ok(gateLevel(false, 1) < 0.04);
 });
-test("Hard House has four kicks per bar, offbeat bass and actual eighth-bar fills", () => {
-  for (let p = 0; p < 3; p++) {
-    assert.ok(PACKS[p].bpm >= 145 && PACKS[p].bpm <= 155);
-    for (let v = 0; v < 4; v++) {
-      for (let bar = 0; bar < 8; bar++)
-        assert.equal(
-          Array.from({ length: 16 }, (_, s) => eventsAt(p, 0, v, bar * 16 + s))
-            .flat()
-            .filter((e) => e.kind === "kick").length,
-          4,
-        );
-      assert.ok(eventsAt(p, 1, v, 2).length > 0);
-    }
-    assert.notDeepEqual(
-      Array.from({ length: 16 }, (_, s) => eventsAt(p, 0, 0, s)),
-      Array.from({ length: 16 }, (_, s) => eventsAt(p, 0, 0, 112 + s)),
-    );
-  }
-});
 test("drive and final safety ceiling are finite, nonlinear and bounded", () => {
   const drive = driveCurve(),
     ceiling = ceilingCurve();
@@ -107,21 +122,4 @@ test("drive and final safety ceiling are finite, nonlinear and bounded", () => {
   assert.ok(ceiling.every((n) => Math.abs(n) < 0.94));
   assert.equal(drive[2048], 0);
   assert.ok(drive[3072] > 0.5);
-});
-
-test("all Hard House bass/stab/riff pitches share the intended minor harmony (Hoover permits harmonic dominant)", () => {
-  const scales = [
-    new Set([0, 2, 4, 5, 7, 9, 11]),
-    new Set([1, 2, 4, 6, 8, 9, 11]),
-    new Set([0, 2, 3, 4, 6, 7, 9, 11]),
-  ];
-  for (let p = 0; p < 3; p++)
-    for (let t = 1; t < 4; t++)
-      for (let v = 0; v < 4; v++)
-        for (let s = 0; s < 128; s++)
-          for (const e of eventsAt(p, t, v, s))
-            assert.ok(
-              scales[p].has(e.note % 12),
-              `${p}/${t}/${v}/${s}: ${e.note}`,
-            );
 });

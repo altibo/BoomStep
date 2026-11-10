@@ -25,13 +25,14 @@ test("all performance controls are inline; portrait layouts are visible and touc
       ),
     ).toBeTruthy();
     for (const sel of [
-      ".pattern",
+      ".song-swipe",
+      ".variant-slider",
       ".mute",
       ".solo",
       ".fx-pads button",
       ".transport button",
       ".special-pad",
-      "#pack",
+      "#all-songs",
     ]) {
       const sizes = await page.locator(sel).evaluateAll((es) =>
         es.map((e) => ({
@@ -45,10 +46,10 @@ test("all performance controls are inline; portrait layouts are visible and touc
     const bounds = await page.locator("#performance").boundingBox();
     console.log("Performance layout", width, height, bounds);
     if (width === 390 && height === 844)
-      expect(bounds.y + bounds.height).toBeLessThanOrEqual(840);
+      expect(bounds.y + bounds.height).toBeLessThanOrEqual(822);
     else expect(bounds.y + bounds.height).toBeGreaterThan(height);
     await page.screenshot({
-      path: `test-results/artifacts/hard-house-${width}x${height}.png`,
+      path: `test-results/artifacts/songs-${width}x${height}.png`,
       fullPage: true,
     });
   }
@@ -109,42 +110,52 @@ test("XY pointer release, hold, gate division, keyboard and dry panic control re
     ),
   ).toBe(0);
 });
-test("old local sessions migrate and Classic packages remain available", async ({
+test("old V1 and V3 local sessions migrate to V4 songs, keeping mix, mute and patterns", async ({
   page,
 }) => {
   await page.goto("/");
-  await page.evaluate(() =>
-    localStorage.setItem(
-      "boomstep-session",
-      JSON.stringify({
-        version: 1,
-        pack: 2,
-        master: 0.72,
-        reverb: 0.2,
-        tracks: Array.from({ length: 4 }, (_, i) => ({
-          variant: i,
-          mute: i === 2,
-          solo: false,
-          volume: 0.4,
-          filter: 0.8,
-          delay: 0.12,
-        })),
-      }),
-    ),
+  const tracks = Array.from({ length: 4 }, (_, i) => ({
+    variant: i,
+    mute: i === 2,
+    solo: false,
+    volume: 0.4,
+    filter: 0.8,
+    delay: 0.12,
+  }));
+  await page.evaluate(
+    (tracks) =>
+      localStorage.setItem(
+        "boomstep-session",
+        JSON.stringify({
+          version: 1,
+          pack: 2,
+          master: 0.72,
+          reverb: 0.2,
+          tracks,
+        }),
+      ),
+    tracks,
   );
   await page.locator("#load").click();
-  expect(await page.evaluate(() => window.boomstep.session.version)).toBe(3);
-  expect(await page.evaluate(() => window.boomstep.session.pack)).toBe(5);
-  expect(
-    await page.evaluate(() => window.boomstep.session.tracks[2].mute),
-  ).toBeTruthy();
+  const s = await page.evaluate(() => window.boomstep.session);
+  expect(s.version).toBe(4);
+  expect(s.pack).toBeUndefined();
+  expect(s.master).toBe(0.72);
+  expect(s.tracks.map((t) => t.variant)).toEqual([0, 1, 2, 3]);
+  expect(s.tracks[2].mute).toBe(true);
+  expect(new Set(s.tracks.map((t) => t.song)).size).toBe(1);
+  await expect(page.locator("#notice")).toContainText(/übernommen|Session/);
   await page.locator("#play").click();
   await expect(page.locator("#play")).toContainText("PAUSE");
+  await expect(page.locator('[data-ribbon="3"]')).toHaveAttribute(
+    "aria-valuenow",
+    "4",
+  );
 });
-test("deterministic audio renders prove distinct Hard House variants, bounded peaks and real FX", async ({
+test("deterministic sample renders prove distinct patterns in all 10 songs, bounded peaks and real FX", async ({
   page,
 }) => {
-  test.setTimeout(120000);
+  test.setTimeout(240000);
   await page.goto("/");
   const report = await page.evaluate(async () => {
     const render = window.boomstep.renderDiagnostic;
@@ -165,16 +176,16 @@ test("deterministic audio renders prove distinct Hard House variants, bounded pe
       };
     };
     const variants = [];
-    for (let p = 0; p < 3; p++)
+    for (let p = 0; p < 10; p++)
       for (let t = 0; t < 4; t++) {
-        const base = await render({ pack: p, track: t, seconds: 1.72 });
+        const base = await render({ song: p, track: t, seconds: 3.3 });
         const a = base.getChannelData(0),
           m = metrics(base);
         for (let v = 0; v < 4; v++) {
           const b =
             v === 0
               ? base
-              : await render({ pack: p, track: t, variant: v, seconds: 1.72 });
+              : await render({ song: p, track: t, variant: v, seconds: 3.3 });
           const d = b.getChannelData(0);
           let error = 0;
           for (let i = 0; i < d.length; i++) error += (d[i] - a[i]) ** 2;
@@ -232,7 +243,7 @@ test("deterministic audio renders prove distinct Hard House variants, bounded pe
   }
   expect(report.repeatRMSE).toBeLessThan(0.0001);
   await writeFile(
-    "test-results/artifacts/hard-house-signal-report.json",
+    "test-results/artifacts/songs-signal-report.json",
     JSON.stringify(report, null, 2),
   );
 });
@@ -276,7 +287,7 @@ test("live XY drive changes recorded PCM and stays below the safety ceiling", as
   expect(after.rms).toBeGreaterThan(before * 1.1);
   expect(after.peak).toBeLessThan(0.95);
   await page.screenshot({
-    path: "test-results/artifacts/hard-house-live-fx.png",
+    path: "test-results/artifacts/songs-live-fx.png",
     fullPage: true,
   });
   await page.locator("#record").click();
@@ -286,11 +297,11 @@ test("live XY drive changes recorded PCM and stays below the safety ceiling", as
       Array.from(new Uint8Array(await (await fetch(a.href)).arrayBuffer())),
     );
   await writeFile(
-    "test-results/artifacts/hard-house-live-fx.wav",
+    "test-results/artifacts/songs-live-fx.wav",
     Buffer.from(bytes),
   );
 });
-test("eight-bar synthesized demo exports and filter, hall, pump are audible in signal metrics", async ({
+test("eight-bar sampled demos export and filter, hall, pump are audible in signal metrics", async ({
   page,
 }) => {
   test.setTimeout(120000);
@@ -311,11 +322,11 @@ test("eight-bar synthesized demo exports and filter, hall, pump are audible in s
   });
   console.log("Additional FX signal verification", report);
   for (const r of report) expect(r.difference).toBeGreaterThan(0.002);
-  for (let pack = 0; pack < 3; pack++) {
+  for (const pack of [0, 4, 8]) {
     const demo = await page.evaluate(async (p) => {
       const buffer = await window.boomstep.renderDiagnostic({
-        pack: p,
-        variant: p === 2 ? 3 : 0,
+        song: p,
+        variant: p === 8 ? 3 : 0,
         seconds: 14,
         bars: 8,
       });
@@ -326,7 +337,7 @@ test("eight-bar synthesized demo exports and filter, hall, pump are audible in s
       };
     }, pack);
     await writeFile(
-      `test-results/artifacts/hard-house-demo-${pack + 1}.wav`,
+      `test-results/artifacts/song-demo-${pack + 1}.wav`,
       Buffer.from(
         encodeWav(
           [[Float32Array.from(demo.left), Float32Array.from(demo.right)]],

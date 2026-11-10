@@ -29,3 +29,9 @@ export function glideEntry(previous, current) {
 export function ribbonCancelled(y, rect, margin = 24) {
   return y < rect.top - margin || y > rect.bottom + margin;
 }
+// Horizontal song swipe: 28px dead zone, then one song per further 64px (max nine, circular list).
+export function swipeSteps(dx, threshold = 28, per = 64) {
+  const a = Math.abs(dx);
+  if (a < threshold) return 0;
+  return Math.sign(dx) * Math.min(9, 1 + Math.floor((a - threshold) / per));
+}

@@ -131,7 +131,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
     }
     const clipped = await page
       .locator(
-        ".mini span,.pattern-cue,.special-pad,.fx-pads button,#interaction-status,#orbit-status",
+        ".mini span,.song-cue,.special-pad,.fx-pads button,#interaction-status,#orbit-status",
       )
       .evaluateAll((es) =>
         es
@@ -213,7 +213,7 @@ test("readable labels, nonoverlapping outside XY axes, reserved pending amber, a
   await expect(page.locator("#pending-1")).toContainText("4 ab Takt");
   expect(
     await page
-      .locator(".pattern.queued")
+      .locator(".stop.queued")
       .evaluate((e) => getComputedStyle(e).borderTopColor),
   ).toBe("rgb(255, 188, 77)");
   await page.screenshot({
@@ -252,7 +252,7 @@ test("R3 all musical targets have real 44px bounds and fit above 840px on 390x84
   await page.goto("/");
   const geometry = await page
     .locator(
-      ".pattern,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#pack",
+      ".variant-slider,.song-swipe,.mute,.solo,.special-pad,.fx-pads button,.transport button,input[data-key],#xy,#all-songs",
     )
     .evaluateAll((es) =>
       es.map((e) => {
